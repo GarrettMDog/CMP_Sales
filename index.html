@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Concrete Pumping CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;font-size:15px}
+input,select,textarea,button{font-family:inherit;font-size:14px}
+button{cursor:pointer;border-radius:8px;padding:8px 16px;border:1px solid #d0cfc7;background:#fff;color:#1a1a1a;transition:background .15s}
+button:hover{background:#f0efe8}
+button.primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+button.primary:hover{background:#333}
+button.danger{background:#fff0f0;color:#7f1f1f;border-color:#f09595}
+button.danger:hover{background:#ffe0e0}
+input,select,textarea{width:100%;padding:8px 12px;border:1px solid #d0cfc7;border-radius:8px;background:#fff;color:#1a1a1a;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#888}
+textarea{resize:vertical;height:72px}
+.hidden{display:none!important}
+
+/* Layout */
+#app{min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e0dfd7;padding:0 24px;height:52px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:16px;font-weight:600;flex:1}
+.topbar h1 span{color:#888;font-weight:400}
+.user-pill{display:flex;align-items:center;gap:6px;font-size:13px;color:#555;background:#f5f5f0;border:1px solid #e0dfd7;border-radius:99px;padding:4px 12px 4px 6px}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.main{max-width:900px;margin:0 auto;padding:24px 16px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid #e0dfd7;border-radius:10px;padding:14px 16px}
+.stat-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:600}
+.tabs{display:flex;border-bottom:1px solid #e0dfd7;margin-bottom:20px}
+.tab{padding:9px 16px;font-size:13px;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;border-top:none;border-left:none;border-right:none;border-radius:0}
+.tab:hover{background:none;color:#1a1a1a}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.toolbar{display:flex;gap:8px;margin-bottom:16px}
+.toolbar input{flex:1}
+.card{background:#fff;border:1px solid #e0dfd7;border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:#aaa}
+.card-top{display:flex;align-items:center;gap:10px}
+.av36{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:#e6f1fb;color:#0c447c;flex-shrink:0}
+.card-name{font-size:14px;font-weight:600}
+.card-sub{font-size:12px;color:#888;margin-top:1px}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500}
+.b-hot{background:#faece7;color:#712b13}
+.b-warm{background:#faeeda;color:#633806}
+.b-cold{background:#e6f1fb;color:#0c447c}
+.b-customer{background:#eaf3de;color:#27500a}
+.card-meta{display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #f0efe8;flex-wrap:wrap;align-items:center}
+.chip{font-size:11px;color:#888;display:flex;align-items:center;gap:3px}
+.overdue-text{color:#a32d2d!important}
+.today-text{color:#854f0b!important}
+.owner-chip{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:#aaa}
+.section-hd{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:16px 0 6px}
+.rem-card{background:#fff;border:1px solid #e0dfd7;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.rem-card.overdue{border-left:3px solid #e24b4a;border-radius:0 12px 12px 0}
+.rem-card.today{border-left:3px solid #ba7517;border-radius:0 12px 12px 0}
+.rem-card.upcoming{border-left:3px solid #1d9e75;border-radius:0 12px 12px 0}
+.empty{text-align:center;padding:40px 16px;color:#aaa;font-size:14px}
+
+/* Detail panel */
+.detail{background:#fff;border:1px solid #e0dfd7;border-radius:12px;padding:20px;margin-top:8px}
+.detail-hd{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #f0efe8}
+.detail-actions{display:flex;gap:8px;margin-bottom:16px}
+.act-log{padding:10px 0;border-bottom:1px solid #f5f5f0;display:flex;gap:10px}
+.act-log:last-child{border-bottom:none}
+.act-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.act-call{background:#e6f1fb;color:#185fa5}
+.act-note{background:#eaf3de;color:#3b6d11}
+.act-email{background:#faeeda;color:#854f0b}
+.act-meet{background:#eeedfe;color:#3c3489}
+.act-site{background:#e1f5ee;color:#085041}
+
+/* Team grid */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.team-card{background:#fff;border:1px solid #e0dfd7;border-radius:12px;padding:14px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:16px;font-weight:600;margin-bottom:18px}
+.field{margin-bottom:14px}
+.field label{font-size:12px;color:#666;display:block;margin-bottom:4px;font-weight:500}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* Login */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f5f0;padding:16px}
+.login-box{background:#fff;border:1px solid #e0dfd7;border-radius:14px;padding:32px;width:100%;max-width:360px}
+.login-box h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-box p{font-size:13px;color:#888;margin-bottom:24px}
+.login-box .field{margin-bottom:14px}
+.login-box button{width:100%;margin-top:4px}
+.error-msg{font-size:13px;color:#a32d2d;margin-top:8px}
+.success-msg{font-size:13px;color:#3b6d11;margin-top:8px}
+
+@media(max-width:600px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .row2{grid-template-columns:1fr}
+  .main{padding:16px 12px}
+}
+</style>
+</head>
+<body>
+
+<div id="login-page" class="login-page hidden">
+  <div class="login-box">
+    <h1>🏗 Concrete Pumping CRM</h1>
+    <p>Sign in to your account</p>
+    <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"/></div>
+    <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"/></div>
+    <button class="primary" onclick="signIn()">Sign in</button>
+    <div id="login-error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <h1>Concrete Pumping <span>CRM</span></h1>
+    <div class="user-pill" id="user-pill">
+      <div class="avatar" id="topbar-avatar" style="background:#e6f1fb;color:#0c447c"></div>
+      <span id="topbar-name"></span>
+    </div>
+    <button onclick="signOut()" style="font-size:13px;padding:6px 12px">Sign out</button>
+  </div>
+
+  <div class="main">
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Contacts</div><div class="stat-val" id="stat-total">—</div></div>
+      <div class="stat"><div class="stat-label">Hot leads</div><div class="stat-val" id="stat-hot" style="color:#993c1d">—</div></div>
+      <div class="stat"><div class="stat-label">Overdue</div><div class="stat-val" id="stat-overdue" style="color:#a32d2d">—</div></div>
+      <div class="stat"><div class="stat-label">My role</div><div class="stat-val" id="stat-role" style="font-size:14px;padding-top:4px">—</div></div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="contacts">Contacts</button>
+      <button class="tab" data-tab="reminders">Reminders</button>
+      <button class="tab hidden" data-tab="team" id="team-tab">Team</button>
+    </div>
+
+    <div id="panel-contacts">
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Search contacts…" oninput="renderContacts()"/>
+        <button class="primary" onclick="openContactModal()">+ Add contact</button>
+      </div>
+      <div id="contacts-list"></div>
+    </div>
+
+    <div id="panel-reminders" class="hidden">
+      <div id="reminders-list"></div>
+    </div>
+
+    <div id="panel-team" class="hidden">
+      <div class="team-grid" id="team-grid"></div>
+    </div>
+
+    <div id="detail-panel"></div>
+  </div>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal-overlay hidden" id="contact-modal">
+  <div class="modal">
+    <h2 id="contact-modal-title">New contact</h2>
+    <div class="row2">
+      <div class="field"><label>Full name *</label><input type="text" id="m-name" placeholder="Dave Kowalski"/></div>
+      <div class="field"><label>Company</label><input type="text" id="m-company" placeholder="Kowalski Constructions"/></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Phone</label><input type="tel" id="m-phone" placeholder="0400 000 000"/></div>
+      <div class="field"><label>Email</label><input type="email" id="m-email" placeholder="dave@example.com"/></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Lead status</label>
+        <select id="m-status">
+          <option value="cold">Cold</option>
+          <option value="warm">Warm</option>
+          <option value="hot">Hot</option>
+          <option value="customer">Customer</option>
+        </select>
+      </div>
+      <div class="field" id="m-owner-field"><label>Assign to</label>
+        <select id="m-owner"></select>
+      </div>
+    </div>
+    <div class="field"><label>Follow-up date</label><input type="date" id="m-followup"/></div>
+    <div class="field"><label>Notes</label><textarea id="m-notes" placeholder="Job type, site, pump size…"></textarea></div>
+    <div class="modal-actions">
+      <button class="danger hidden" id="delete-contact-btn" onclick="deleteContact()">Delete</button>
+      <button onclick="closeContactModal()">Cancel</button>
+      <button class="primary" onclick="saveContact()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Activity Modal -->
+<div class="modal-overlay hidden" id="activity-modal">
+  <div class="modal">
+    <h2 id="activity-modal-title">Log activity</h2>
+    <div class="field"><label>Type</label>
+      <select id="a-type">
+        <option value="Call">Call</option>
+        <option value="Meeting">Meeting</option>
+        <option value="Email">Email</option>
+        <option value="Site visit">Site visit</option>
+        <option value="Note">Note</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes *</label><textarea id="a-notes" style="height:90px" placeholder="What was discussed, outcomes, next steps…"></textarea></div>
+    <div class="field"><label>Update follow-up reminder</label><input type="date" id="a-followup"/></div>
+    <div class="modal-actions">
+      <button onclick="closeActivityModal()">Cancel</button>
+      <button class="primary" onclick="saveActivity()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vqiqdvgdcauzetlkaddf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-Ap2-M0Zqap8KStbk52p3w_BvjgD1ve';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+let allContacts = [];
+let allProfiles = [];
+let activeTab = 'contacts';
+let editingContactId = null;
+let detailContactId = null;
+let activityContactId = null;
+
+const AVATAR_COLORS = [
+  ['#e6f1fb','#0c447c'],['#eeedfe','#3c3489'],['#e1f5ee','#085041'],
+  ['#faeeda','#633806'],['#faece7','#712b13'],['#eaf3de','#27500a']
+];
+function avatarColor(str) {
+  let h = 0; for (let c of (str||'')) h = c.charCodeAt(0) + h * 31;
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function initials(name) {
+  return (name||'').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
+}
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function fuClass(d) {
+  if (!d) return 'upcoming';
+  const t = todayStr();
+  return d < t ? 'overdue' : d === t ? 'today' : 'upcoming';
+}
+function fuLabel(d) {
+  if (!d) return '';
+  const t = todayStr();
+  return d < t ? 'Overdue' : d === t ? 'Today' : fmtDate(d);
+}
+function badgeHtml(s) {
+  const map = {hot:'b-hot',warm:'b-warm',cold:'b-cold',customer:'b-customer'};
+  const lbl = s ? s.charAt(0).toUpperCase()+s.slice(1) : '';
+  return `<span class="badge ${map[s]||'b-cold'}">${lbl}</span>`;
+}
+function actClass(type) {
+  return {Call:'act-call',Meeting:'act-meet',Email:'act-email','Site visit':'act-site',Note:'act-note'}[type]||'act-note';
+}
+function actEmoji(type) {
+  return {Call:'📞',Meeting:'👥',Email:'✉️','Site visit':'📍',Note:'📝'}[type]||'📝';
+}
+
+// Auth
+async function checkAuth() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    await loadUser(session.user);
+  } else {
+    showLogin();
+  }
+}
+async function loadUser(user) {
+  currentUser = user;
+  const { data } = await db.from('profiles').select('*').eq('id', user.id).single();
+  currentProfile = data;
+  if (!data) { showLogin(); return; }
+  showApp();
+}
+function showLogin() {
+  document.getElementById('login-page').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+function showApp() {
+  document.getElementById('login-page').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const [bg, fg] = avatarColor(currentProfile.name);
+  const av = document.getElementById('topbar-avatar');
+  av.style.background = bg; av.style.color = fg;
+  av.textContent = initials(currentProfile.name);
+  document.getElementById('topbar-name').textContent = currentProfile.name;
+  document.getElementById('stat-role').textContent = currentProfile.role === 'admin' ? 'Admin' : 'Sales rep';
+  if (currentProfile.role === 'admin') {
+    document.getElementById('team-tab').classList.remove('hidden');
+  }
+  loadAll();
+}
+async function signIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const err = document.getElementById('login-error');
+  err.classList.add('hidden');
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) { err.textContent = error.message; err.classList.remove('hidden'); return; }
+  await loadUser(data.user);
+}
+async function signOut() {
+  await db.auth.signOut();
+  currentUser = null; currentProfile = null;
+  showLogin();
+}
+
+// Data
+async function loadAll() {
+  const [{ data: contacts }, { data: profiles }] = await Promise.all([
+    db.from('contacts').select('*').order('created_at', { ascending: false }),
+    db.from('profiles').select('*')
+  ]);
+  allContacts = contacts || [];
+  allProfiles = profiles || [];
+  renderStats();
+  renderContacts();
+  renderReminders();
+  if (currentProfile.role === 'admin') renderTeam();
+}
+
+function renderStats() {
+  const t = todayStr();
+  document.getElementById('stat-total').textContent = allContacts.length;
+  document.getElementById('stat-hot').textContent = allContacts.filter(c=>c.status==='hot').length;
+  document.getElementById('stat-overdue').textContent = allContacts.filter(c=>c.followup && c.followup < t).length;
+}
+
+function renderContacts() {
+  const q = (document.getElementById('search').value||'').toLowerCase();
+  const list = document.getElementById('contacts-list');
+  let cs = allContacts;
+  if (q) cs = cs.filter(c => (c.name+' '+(c.company||'')).toLowerCase().includes(q));
+  if (!cs.length) {
+    list.innerHTML = `<div class="empty">No contacts${q?' found':' yet — add one above'}</div>`;
+    return;
+  }
+  list.innerHTML = cs.map(c => {
+    const owner = allProfiles.find(p=>p.id===c.owner_id)||{name:'Unassigned'};
+    const [bg,fg] = avatarColor(c.name);
+    const fc = fuClass(c.followup);
+    const fcClass = fc==='overdue'?'overdue-text':fc==='today'?'today-text':'';
+    return `<div class="card" onclick="openDetail('${c.id}')">
+      <div class="card-top">
+        <div class="av36" style="background:${bg};color:${fg}">${initials(c.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="card-name">${c.name}</div>
+          <div class="card-sub">${c.company||'No company'}</div>
+        </div>
+        ${badgeHtml(c.status)}
+      </div>
+      <div class="card-meta">
+        ${c.phone?`<span class="chip">📞 ${c.phone}</span>`:''}
+        ${c.followup?`<span class="chip ${fcClass}">🔔 ${fuLabel(c.followup)}</span>`:''}
+        <span class="owner-chip">
+          <div class="avatar" style="width:16px;height:16px;font-size:8px;background:${avatarColor(owner.name)[0]};color:${avatarColor(owner.name)[1]}">${initials(owner.name)}</div>
+          ${owner.name}
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderReminders() {
+  const t = todayStr();
+  const cs = allContacts.filter(c=>c.followup).sort((a,b)=>a.followup.localeCompare(b.followup));
+  const groups = {overdue:[],today:[],upcoming:[]};
+  cs.forEach(c => groups[fuClass(c.followup)].push(c));
+  const list = document.getElementById('reminders-list');
+  if (!cs.length) { list.innerHTML = `<div class="empty">No reminders scheduled</div>`; return; }
+  let html = '';
+  [['overdue','Overdue','#a32d2d'],['today','Today','#854f0b'],['upcoming','Upcoming','#0f6e56']].forEach(([k,lbl,col])=>{
+    if (!groups[k].length) return;
+    html += `<div class="section-hd" style="color:${col}">${lbl}</div>`;
+    html += groups[k].map(c=>`
+      <div class="rem-card ${k}" onclick="openDetail('${c.id}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600">${c.name}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px">${c.company||''}</div>
+          ${c.notes?`<div style="font-size:12px;color:#aaa;margin-top:2px">${c.notes.slice(0,60)}${c.notes.length>60?'…':''}</div>`:''}
+        </div>
+        <div style="font-size:12px;color:${col};white-space:nowrap;margin-left:8px">${fuLabel(c.followup)}</div>
+      </div>`).join('');
+  });
+  list.innerHTML = html;
+}
+
+function renderTeam() {
+  const reps = allProfiles.filter(p=>p.role==='rep');
+  const t = todayStr();
+  document.getElementById('team-grid').innerHTML = reps.map(rep => {
+    const rc = allContacts.filter(c=>c.owner_id===rep.id);
+    const hot = rc.filter(c=>c.status==='hot').length;
+    const due = rc.filter(c=>c.followup && c.followup <= t).length;
+    const [bg,fg] = avatarColor(rep.name);
+    return `<div class="team-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div class="av36" style="background:${bg};color:${fg}">${initials(rep.name)}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600">${rep.name}</div>
+          <div style="font-size:11px;color:#888">${rc.length} contact${rc.length!==1?'s':''}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;background:#f5f5f0;border-radius:8px;padding:8px">
+          <div style="font-size:11px;color:#888">Hot</div>
+          <div style="font-size:18px;font-weight:600;color:${hot>0?'#993c1d':'#1a1a1a'}">${hot}</div>
+        </div>
+        <div style="flex:1;background:#f5f5f0;border-radius:8px;padding:8px">
+          <div style="font-size:11px;color:#888">Due</div>
+          <div style="font-size:18px;font-weight:600;color:${due>0?'#a32d2d':'#1a1a1a'}">${due}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Detail
+async function openDetail(id) {
+  detailContactId = id;
+  const c = allContacts.find(x=>x.id===id);
+  if (!c) return;
+  const owner = allProfiles.find(p=>p.id===c.owner_id)||{name:'Unassigned'};
+  const { data: acts } = await db.from('activities').select('*, profiles(name)').eq('contact_id', id).order('created_at', {ascending:false});
+  const canEdit = currentProfile.role==='admin' || c.owner_id===currentUser.id;
+  const [bg,fg] = avatarColor(c.name);
+  const fc = fuClass(c.followup);
+  const fcColor = fc==='overdue'?'#a32d2d':fc==='today'?'#854f0b':'#888';
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="detail">
+      <div class="detail-hd">
+        <div class="av36" style="width:42px;height:42px;font-size:14px;background:${bg};color:${fg}">${initials(c.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:16px;font-weight:700">${c.name}</div>
+          <div style="font-size:13px;color:#888;margin-top:2px">${c.company||'No company'} · ${badgeHtml(c.status)}</div>
+        </div>
+        <button onclick="closeDetail()" style="padding:6px 10px;font-size:18px;border:none;background:none;color:#888">×</button>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:13px;color:#666">
+        ${c.phone?`<span>📞 ${c.phone}</span>`:''}
+        ${c.email?`<span>✉️ ${c.email}</span>`:''}
+        ${c.followup?`<span style="color:${fcColor}">🔔 ${fuLabel(c.followup)}</span>`:''}
+        <span style="color:#aaa">👤 ${owner.name}</span>
+      </div>
+      ${c.notes?`<div style="font-size:13px;color:#666;background:#f8f8f5;border-radius:8px;padding:10px 12px;margin-bottom:14px">${c.notes}</div>`:''}
+      <div class="detail-actions">
+        <button onclick="openActivityModal('${c.id}', '${(c.followup||'')}')">+ Log activity</button>
+        ${canEdit?`<button onclick="openContactModal('${c.id}')">✏️ Edit</button>`:''}
+      </div>
+      <div style="font-size:12px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Activity (${(acts||[]).length})</div>
+      <div>
+        ${!(acts||[]).length ? `<div style="font-size:13px;color:#aaa;padding:8px 0">No activity logged yet</div>` :
+        acts.map(a=>`
+          <div class="act-log">
+            <div class="act-icon ${actClass(a.type)}">${actEmoji(a.type)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;font-weight:600">${a.type}</span>
+                <span style="font-size:11px;color:#aaa">${a.profiles?.name||''} · ${fmtDate(a.created_at.split('T')[0])}</span>
+              </div>
+              <div style="font-size:13px;color:#555;margin-top:3px">${a.notes}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeDetail() {
+  detailContactId = null;
+  document.getElementById('detail-panel').innerHTML = '';
+}
+
+// Contact modal
+function openContactModal(id) {
+  editingContactId = id || null;
+  const c = id ? allContacts.find(x=>x.id===id) : null;
+  document.getElementById('contact-modal-title').textContent = c ? 'Edit contact' : 'New contact';
+  document.getElementById('m-name').value = c?.name||'';
+  document.getElementById('m-company').value = c?.company||'';
+  document.getElementById('m-phone').value = c?.phone||'';
+  document.getElementById('m-email').value = c?.email||'';
+  document.getElementById('m-status').value = c?.status||'cold';
+  document.getElementById('m-followup').value = c?.followup||'';
+  document.getElementById('m-notes').value = c?.notes||'';
+  const ownerSel = document.getElementById('m-owner');
+  const ownerField = document.getElementById('m-owner-field');
+  if (currentProfile.role === 'admin') {
+    ownerField.classList.remove('hidden');
+    const reps = allProfiles.filter(p=>p.role==='rep');
+    ownerSel.innerHTML = reps.map(r=>`<option value="${r.id}"${(c?.owner_id||currentUser.id)===r.id?' selected':''}>${r.name}</option>`).join('');
+  } else {
+    ownerField.classList.add('hidden');
+  }
+  const delBtn = document.getElementById('delete-contact-btn');
+  c ? delBtn.classList.remove('hidden') : delBtn.classList.add('hidden');
+  document.getElementById('contact-modal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('m-name').focus(),50);
+}
+function closeContactModal() {
+  document.getElementById('contact-modal').classList.add('hidden');
+  editingContactId = null;
+}
+async function saveContact() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { document.getElementById('m-name').focus(); return; }
+  const ownerId = currentProfile.role==='admin'
+    ? document.getElementById('m-owner').value
+    : currentUser.id;
+  const data = {
+    name,
+    company: document.getElementById('m-company').value.trim()||null,
+    phone: document.getElementById('m-phone').value.trim()||null,
+    email: document.getElementById('m-email').value.trim()||null,
+    status: document.getElementById('m-status').value,
+    followup: document.getElementById('m-followup').value||null,
+    notes: document.getElementById('m-notes').value.trim()||null,
+    owner_id: ownerId
+  };
+  if (editingContactId) {
+    await db.from('contacts').update(data).eq('id', editingContactId);
+  } else {
+    await db.from('contacts').insert(data);
+  }
+  closeContactModal();
+  await loadAll();
+  if (detailContactId) openDetail(detailContactId);
+}
+async function deleteContact() {
+  if (!editingContactId) return;
+  if (!confirm('Delete this contact and all their activity? This cannot be undone.')) return;
+  await db.from('contacts').delete().eq('id', editingContactId);
+  closeContactModal();
+  closeDetail();
+  await loadAll();
+}
+
+// Activity modal
+function openActivityModal(contactId, currentFollowup) {
+  activityContactId = contactId;
+  const c = allContacts.find(x=>x.id===contactId);
+  document.getElementById('activity-modal-title').textContent = `Log activity — ${c?.name||''}`;
+  document.getElementById('a-notes').value = '';
+  document.getElementById('a-followup').value = currentFollowup||'';
+  document.getElementById('activity-modal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('a-notes').focus(),50);
+}
+function closeActivityModal() {
+  document.getElementById('activity-modal').classList.add('hidden');
+  activityContactId = null;
+}
+async function saveActivity() {
+  const notes = document.getElementById('a-notes').value.trim();
+  if (!notes) { document.getElementById('a-notes').focus(); return; }
+  const followup = document.getElementById('a-followup').value||null;
+  await db.from('activities').insert({
+    contact_id: activityContactId,
+    user_id: currentUser.id,
+    type: document.getElementById('a-type').value,
+    notes
+  });
+  if (followup) {
+    await db.from('contacts').update({ followup }).eq('id', activityContactId);
+  }
+  closeActivityModal();
+  await loadAll();
+  if (detailContactId) openDetail(detailContactId);
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    activeTab = t.dataset.tab;
+    ['contacts','reminders','team'].forEach(p=>{
+      document.getElementById(`panel-${p}`).classList.toggle('hidden', p!==activeTab);
+    });
+    closeDetail();
+  });
+});
+
+// Close modals on overlay click
+document.getElementById('contact-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeContactModal(); });
+document.getElementById('activity-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeActivityModal(); });
+
+// Init
+checkAuth();
+</script>
+</body>
+</html>
