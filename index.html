@@ -272,6 +272,15 @@ function actEmoji(type) {
   return {Call:'📞',Meeting:'👥',Email:'✉️','Site visit':'📍',Note:'📝'}[type]||'📝';
 }
 
+async function signOut() {
+  await db.auth.signOut();
+  currentUser = null;
+  currentProfile = null;
+  allContacts = [];
+  allProfiles = [];
+  showLogin();
+}
+  
 // Auth
 async function checkAuth() {
   const { data: { session } } = await db.auth.getSession();
