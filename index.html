@@ -283,7 +283,8 @@ async function checkAuth() {
 }
 async function loadUser(user) {
   currentUser = user;
-  const { data } = await db.from('profiles').select('*').eq('id', user.id).single();
+ const { data, error } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (error) { console.log('Profile error:', error); showLogin(); return; }
   currentProfile = data;
   if (!data) { showLogin(); return; }
   showApp();
