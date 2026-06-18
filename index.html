@@ -308,18 +308,20 @@ function showApp() {
   loadAll();
 }
 async function signIn() {
+  console.log('signIn called');
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
+  console.log('email:', email);
   const err = document.getElementById('login-error');
   err.classList.add('hidden');
-  const { data, error } = await db.auth.signInWithPassword({ email, password });
-  if (error) { err.textContent = error.message; err.classList.remove('hidden'); return; }
-  await loadUser(data.user);
-}
-async function signOut() {
-  await db.auth.signOut();
-  currentUser = null; currentProfile = null;
-  showLogin();
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    console.log('auth result:', data, error);
+    if (error) { err.textContent = error.message; err.classList.remove('hidden'); return; }
+    await loadUser(data.user);
+  } catch(e) {
+    console.log('exception:', e);
+  }
 }
 
 // Data
