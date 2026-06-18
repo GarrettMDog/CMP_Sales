@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Concrete Pumping CRM</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;font-size:15px}
@@ -221,8 +221,10 @@ textarea{resize:vertical;height:72px}
 <script>
 const SUPABASE_URL = 'https://vqiqdvgdcauzetlkaddf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxaXFkdmdkY2F1emV0bGthZGRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MTY2MTgsImV4cCI6MjA5NzI5MjYxOH0.VstVUjLukcbUHnO7GFnD-BZIlfVhtZVVQx0jwhDHu74';
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const { createClient } = window.supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
 
 let currentUser = null;
 let currentProfile = null;
