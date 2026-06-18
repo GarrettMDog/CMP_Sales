@@ -282,11 +282,12 @@ async function checkAuth() {
   }
 }
 async function loadUser(user) {
+  console.log('loadUser called', user);
   currentUser = user;
- const { data, error } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
-  if (error) { console.log('Profile error:', error); showLogin(); return; }
+  const { data, error } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  console.log('profile result:', data, error);
   currentProfile = data;
-  if (!data) { showLogin(); return; }
+  if (!data) { console.log('no profile found, showing login'); showLogin(); return; }
   showApp();
 }
 function showLogin() {
