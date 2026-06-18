@@ -534,8 +534,9 @@ function closeContactModal() {
 async function saveContact() {
   const name = document.getElementById('m-name').value.trim();
   if (!name) { document.getElementById('m-name').focus(); return; }
-  const ownerId = currentProfile.role==='admin'
-    ? document.getElementById('m-owner').value
+const ownerEl = document.getElementById('m-owner');
+const ownerId = (currentProfile.role==='admin' && ownerEl && ownerEl.value)
+    ? ownerEl.value
     : currentUser.id;
   const data = {
     name,
