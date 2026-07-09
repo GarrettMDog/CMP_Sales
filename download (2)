@@ -1,0 +1,39 @@
+import { useEffect, useState } from 'react';
+import { app } from '@microsoft/teams-js';
+
+// Provides the current signed-in Teams user (name + email) so that every
+// interaction logged is auto-tagged with a real identity — no manual
+// "assigned rep" picker required. Falls back to a local dev identity when
+// running outside of Teams (e.g. `npm run dev` in a browser tab).
+export function useTeamsUser() {
+  const [user, setUser] = useState(null);
+  const [inTeams, setInTeams] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    app.initialize()
+      .then(() => app.getContext())
+      .then((context) => {
+        if (cancelled) return;
+        setInTeams(true);
+        setUser({
+          name: context.user?.displayName || 'Teams User',
+          email: context.user?.userPrincipalName || context.user?.loginHint || '',
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Not running inside Teams (local dev / preview) — use a placeholder
+        // identity so the app is still fully usable.
+        setInTeams(false);
+        setUser({ name: 'Dev User', email: '[email protected]' });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return { user, inTeams, loading };
+}
