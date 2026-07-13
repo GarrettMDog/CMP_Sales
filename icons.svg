@@ -1,500 +1,182 @@
-:root {
-  color-scheme: light;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html, body, #root {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-}
-
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: var(--colorNeutralBackground2);
-}
-
-.app-loading {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.app-error {
-  background: var(--colorPaletteRedBackground2);
-  color: var(--colorPaletteRedForeground2);
-  padding: 8px 16px;
-  font-size: 13px;
-}
-
-.app-body {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.app-tabs {
-  background: var(--colorNeutralBackground1);
-  border-bottom: 1px solid var(--colorNeutralStroke2);
-  padding: 0 16px;
-}
-
-.activity-dashboard {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 32px;
-}
-
-.activity-dashboard__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.activity-dashboard__header h2 {
-  margin: 0;
-}
-
-.activity-dashboard__loading {
-  display: flex;
-  justify-content: center;
-  padding: 40px;
-}
-
-.activity-summary-cards {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.summary-card {
-  flex: 1;
-  padding: 16px;
-  text-align: center;
-}
-
-.summary-card__number {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--colorBrandForeground1);
-}
-
-.summary-card__label {
-  font-size: 12px;
-  color: var(--colorNeutralForeground3);
-  margin-top: 4px;
-}
-
-.activity-columns {
-  display: flex;
-  gap: 32px;
-  flex-wrap: wrap;
-}
-
-.rep-leaderboard, .recent-feed {
-  flex: 1;
-  min-width: 280px;
-}
-
-.rep-leaderboard h3, .recent-feed h3 {
-  font-size: 14px;
-  margin-bottom: 12px;
-}
-
-.muted {
-  color: var(--colorNeutralForeground3);
-  font-size: 13px;
-}
-
-.rep-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-}
-
-.rep-row__name {
-  font-size: 13px;
-  font-weight: 600;
-  width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.rep-row__bar-track {
-  flex: 1;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--colorNeutralBackground3);
-  overflow: hidden;
-}
-
-.rep-row__bar {
-  height: 100%;
-  background: var(--colorBrandBackground);
-  border-radius: 4px;
-}
-
-.rep-row__count {
-  font-size: 13px;
-  font-weight: 700;
-  width: 24px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.feed-item {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--colorNeutralStroke2);
-  cursor: pointer;
-}
-
-.feed-item:hover {
-  background: var(--colorNeutralBackground1Hover);
-}
-
-.feed-item__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.feed-item__top {
-  font-size: 13px;
-}
-
-.feed-item__meta {
-  font-size: 11px;
-  color: var(--colorNeutralForeground3);
-  margin-top: 2px;
-}
-
-.feed-item__note {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--colorNeutralForeground2);
-}
-.reminders-banner {
-  background: var(--colorNeutralBackground1);
-  border-bottom: 1px solid var(--colorNeutralStroke2);
-  padding: 10px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.reminders-banner__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  flex-wrap: wrap;
-}
-
-.reminders-banner__chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.reminders-banner__chip {
-  cursor: pointer;
-}
-
-/* ---- Contact list (left column) ---- */
-.contact-list {
-  width: 320px;
-  min-width: 280px;
-  border-right: 1px solid var(--colorNeutralStroke2);
-  display: flex;
-  flex-direction: column;
-  background: var(--colorNeutralBackground1);
-}
-
-.contact-list__header {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-}
-
-.contact-list__header > :first-child {
-  flex: 1;
-}
-
-.contact-list__filter {
-  margin: 0 12px 8px;
-}
-
-.contact-list__items {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.contact-list__empty {
-  padding: 24px 16px;
-  color: var(--colorNeutralForeground3);
-  font-size: 13px;
-  text-align: center;
-}
-
-.company-group__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--colorNeutralForeground3);
-  position: sticky;
-  top: 0;
-  background: var(--colorNeutralBackground1);
-}
-
-.company-group__count {
-  background: var(--colorNeutralBackground3);
-  border-radius: 10px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: none;
-}
-
-.contact-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.contact-row:hover {
-  background: var(--colorNeutralBackground1Hover);
-}
-
-.contact-row--active {
-  background: var(--colorBrandBackground2);
-}
-
-.contact-row__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.contact-row__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.contact-row__name {
-  font-weight: 600;
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contact-row__meta {
-  font-size: 12px;
-  color: var(--colorNeutralForeground3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.contact-row__overdue {
-  color: var(--colorPaletteRedForeground1);
-  font-weight: 600;
-}
-
-/* ---- Contact detail (right column) ---- */
-.contact-detail {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  background: var(--colorNeutralBackground2);
-}
-
-.contact-detail--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--colorNeutralForeground3);
-}
-
-.contact-detail__header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.contact-detail__heading {
-  flex: 1;
-}
-
-.contact-detail__heading h2 {
-  margin: 0 0 2px;
-}
-
-.contact-detail__subtitle {
-  color: var(--colorNeutralForeground3);
-  font-size: 13px;
-  margin-bottom: 6px;
-}
-
-.contact-detail__badges {
-  display: flex;
-  gap: 6px;
-}
-
-.contact-detail__actions {
-  display: flex;
-  gap: 4px;
-}
-
-.contact-detail__facts {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin: 16px 0;
-  font-size: 13px;
-}
-
-.contact-detail__facts > div {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--colorNeutralForeground2);
-}
-
-.contact-detail__context {
-  font-size: 13px;
-  color: var(--colorNeutralForeground2);
-  background: var(--colorNeutralBackground1);
-  border-radius: 4px;
-  padding: 10px 12px;
-}
-
-.contact-detail__reminder-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  background: var(--colorBrandBackground2);
-  border-radius: 4px;
-  padding: 10px 12px;
-  margin: 12px 0;
-}
-
-.log-interaction {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 480px;
-  margin: 16px 0;
-}
-
-.log-interaction__row {
-  display: flex;
-  gap: 8px;
-}
-
-.interaction-timeline h3 {
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.contact-detail__empty-history {
-  font-size: 13px;
-  color: var(--colorNeutralForeground3);
-}
-
-.timeline-item {
-  display: flex;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--colorNeutralStroke2);
-}
-
-.timeline-item__body {
-  flex: 1;
-}
-
-.timeline-item__top {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  font-size: 13px;
-}
-
-.timeline-item__type {
-  color: var(--colorNeutralForeground3);
-}
-
-.timeline-item__date {
-  margin-left: auto;
-  color: var(--colorNeutralForeground3);
-  font-size: 12px;
-}
-
-.timeline-item p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--colorNeutralForeground2);
-}
-
-/* ---- Modal ---- */
-.modal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
-  min-width: 480px;
-}
-
-.birthday-row {
-  display: flex;
-  gap: 8px;
-}
-
-@media (max-width: 700px) {
-  .app-body {
-    flex-direction: column;
+import { useEffect, useState, useCallback } from 'react';
+import {
+  FluentProvider, teamsLightTheme, teamsDarkTheme, Spinner, TabList, Tab,
+} from '@fluentui/react-components';
+import { app } from '@microsoft/teams-js';
+
+import ContactList from './components/ContactList.jsx';
+import ContactDetail from './components/ContactDetail.jsx';
+import AddEditContactModal from './components/AddEditContactModal.jsx';
+import RemindersBanner from './components/RemindersBanner.jsx';
+import ActivityDashboard from './components/ActivityDashboard.jsx';
+import { useTeamsUser } from './useTeamsUser.js';
+import { api } from './api.js';
+import './styles.css';
+
+export default function App() {
+  const { user, loading: userLoading } = useTeamsUser();
+  const [theme, setTheme] = useState(teamsLightTheme);
+  const [activeView, setActiveView] = useState('contacts');
+
+  const [contacts, setContacts] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectedContact, setSelectedContact] = useState(null);
+
+  const [search, setSearch] = useState('');
+  const [temperatureFilter, setTemperatureFilter] = useState('');
+  const [repFilter, setRepFilter] = useState('');
+  const [reps, setReps] = useState([]);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState(null);
+
+  const [dueContacts, setDueContacts] = useState([]);
+  const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Follow Teams theme (light/dark/high-contrast) so the tab always matches.
+  useEffect(() => {
+    app.initialize()
+      .then(() => {
+        app.getContext().then((ctx) => {
+          setTheme(ctx.app?.theme === 'dark' ? teamsDarkTheme : teamsLightTheme);
+        });
+        app.registerOnThemeChangeHandler((newTheme) => {
+          setTheme(newTheme === 'dark' ? teamsDarkTheme : teamsLightTheme);
+        });
+      })
+      .catch(() => { /* running outside Teams, keep light theme */ });
+  }, []);
+
+  const refreshList = useCallback(async () => {
+    setLoadingList(true);
+    setErrorMsg('');
+    try {
+      const params = {};
+      if (search) params.q = search;
+      if (temperatureFilter) params.temperature = temperatureFilter;
+      if (repFilter) params.lastContactedBy = repFilter;
+      const [list, due, birthdays, repList] = await Promise.all([
+        api.listContacts(params),
+        api.dueReminders(),
+        api.upcomingBirthdays(30),
+        api.listReps(),
+      ]);
+      setContacts(list);
+      setDueContacts(due);
+      setUpcomingBirthdays(birthdays);
+      setReps(repList);
+    } catch (err) {
+      setErrorMsg(err.message || 'Could not reach the CRM backend.');
+    } finally {
+      setLoadingList(false);
+    }
+  }, [search, temperatureFilter, repFilter]);
+
+  useEffect(() => { refreshList(); }, [refreshList]);
+
+  useEffect(() => {
+    if (!selectedId) { setSelectedContact(null); return; }
+    api.getContact(selectedId).then(setSelectedContact).catch(() => setSelectedContact(null));
+  }, [selectedId, contacts]);
+
+  async function handleSaveContact(data) {
+    if (editingContact) {
+      await api.updateContact(editingContact.id, data);
+    } else {
+      const created = await api.createContact(data);
+      setSelectedId(created.id);
+    }
+    setModalOpen(false);
+    setEditingContact(null);
+    refreshList();
   }
-  .contact-list {
-    width: 100%;
-    max-height: 45vh;
-    border-right: none;
-    border-bottom: 1px solid var(--colorNeutralStroke2);
+
+  async function handleLogInteraction(id, data) {
+    await api.logInteraction(id, data);
+    const updated = await api.getContact(id);
+    setSelectedContact(updated);
+    refreshList();
   }
-  .modal-grid {
-    grid-template-columns: 1fr;
-    min-width: unset;
+
+  async function handleDelete(id) {
+    if (!confirm('Remove this contact? This cannot be undone.')) return;
+    await api.deleteContact(id);
+    if (selectedId === id) setSelectedId(null);
+    refreshList();
   }
-  .contact-detail {
-    padding: 16px;
+
+  if (userLoading) {
+    return (
+      <FluentProvider theme={theme}>
+        <div className="app-loading"><Spinner label="Loading your relationships..." /></div>
+      </FluentProvider>
+    );
   }
+
+  return (
+    <FluentProvider theme={theme}>
+      <div className="app-shell">
+        <div className="app-tabs">
+          <TabList selectedValue={activeView} onTabSelect={(_, d) => setActiveView(d.value)}>
+            <Tab value="contacts">Contacts</Tab>
+            <Tab value="activity">Activity</Tab>
+          </TabList>
+        </div>
+
+        {activeView === 'contacts' && (
+          <>
+            <RemindersBanner
+              dueContacts={dueContacts}
+              upcomingBirthdays={upcomingBirthdays}
+              onSelect={setSelectedId}
+            />
+
+            {errorMsg && (
+              <div className="app-error">
+                {errorMsg} — showing an empty list until the backend at your configured API URL is reachable.
+              </div>
+            )}
+
+            <div className="app-body">
+              <ContactList
+                contacts={contacts}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                onAdd={() => { setEditingContact(null); setModalOpen(true); }}
+                search={search}
+                onSearchChange={setSearch}
+                temperatureFilter={temperatureFilter}
+                onTemperatureFilterChange={setTemperatureFilter}
+                reps={reps}
+                repFilter={repFilter}
+                onRepFilterChange={setRepFilter}
+              />
+              <ContactDetail
+                contact={selectedContact}
+                currentUser={user}
+                onLogInteraction={handleLogInteraction}
+                onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
+                onDelete={handleDelete}
+              />
+            </div>
+          </>
+        )}
+
+        {activeView === 'activity' && (
+          <ActivityDashboard
+            onSelectContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
+          />
+        )}
+
+        <AddEditContactModal
+          open={modalOpen}
+          initial={editingContact}
+          onClose={() => { setModalOpen(false); setEditingContact(null); }}
+          onSave={handleSaveContact}
+        />
+      </div>
+    </FluentProvider>
+  );
 }

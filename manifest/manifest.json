@@ -1,0 +1,43 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "developer": {
+    "name": "Your Company",
+    "websiteUrl": "https://example.com",
+    "privacyUrl": "https://example.com/privacy",
+    "termsOfUseUrl": "https://example.com/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "Relationship CRM",
+    "full": "Relationship CRM for Sales"
+  },
+  "description": {
+    "short": "Track relationships, not just deals.",
+    "full": "A shared relationship tracker for the sales team: log every touchpoint, see who last spoke to a contact, and get reminded — automatically routed to whoever spoke to them most recently — before a relationship goes cold. Includes birthday tracking so no one misses a beat."
+  },
+  "accentColor": "#5B5FC7",
+  "staticTabs": [
+    {
+      "entityId": "relationshipCrmHome",
+      "name": "Contacts",
+      "contentUrl": "https://REPLACE_WITH_YOUR_DEPLOYED_URL/",
+      "websiteUrl": "https://REPLACE_WITH_YOUR_DEPLOYED_URL/",
+      "scopes": ["personal"]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://REPLACE_WITH_YOUR_DEPLOYED_URL/config.html",
+      "canUpdateConfiguration": true,
+      "scopes": ["team", "groupChat"]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["REPLACE_WITH_YOUR_DEPLOYED_URL"]
+}

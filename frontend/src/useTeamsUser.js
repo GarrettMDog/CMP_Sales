@@ -28,7 +28,7 @@ export function useTeamsUser() {
         // Not running inside Teams (local dev / preview) — use a placeholder
         // identity so the app is still fully usable.
         setInTeams(false);
-        setUser({ name: 'Dev User', email: '[email protected]' });
+        setUser({ name: 'Dev User', email: 'dev@example.com' });
       })
       .finally(() => { if (!cancelled) setLoading(false); });
 

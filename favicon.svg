@@ -1,182 +1,31 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  FluentProvider, teamsLightTheme, teamsDarkTheme, Spinner, TabList, Tab,
-} from '@fluentui/react-components';
-import { app } from '@microsoft/teams-js';
+// Talks to the backend REST API. Swap API_BASE for your deployed backend URL.
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
-import ContactList from './components/ContactList.jsx';
-import ContactDetail from './components/ContactDetail.jsx';
-import AddEditContactModal from './components/AddEditContactModal.jsx';
-import RemindersBanner from './components/RemindersBanner.jsx';
-import ActivityDashboard from './components/ActivityDashboard.jsx';
-import { useTeamsUser } from './useTeamsUser.js';
-import { api } from './api.js';
-import './styles.css';
-
-export default function App() {
-  const { user, loading: userLoading } = useTeamsUser();
-  const [theme, setTheme] = useState(teamsLightTheme);
-  const [activeView, setActiveView] = useState('contacts');
-
-  const [contacts, setContacts] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
-  const [selectedContact, setSelectedContact] = useState(null);
-
-  const [search, setSearch] = useState('');
-  const [temperatureFilter, setTemperatureFilter] = useState('');
-  const [repFilter, setRepFilter] = useState('');
-  const [reps, setReps] = useState([]);
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingContact, setEditingContact] = useState(null);
-
-  const [dueContacts, setDueContacts] = useState([]);
-  const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
-  const [loadingList, setLoadingList] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  // Follow Teams theme (light/dark/high-contrast) so the tab always matches.
-  useEffect(() => {
-    app.initialize()
-      .then(() => {
-        app.getContext().then((ctx) => {
-          setTheme(ctx.app?.theme === 'dark' ? teamsDarkTheme : teamsLightTheme);
-        });
-        app.registerOnThemeChangeHandler((newTheme) => {
-          setTheme(newTheme === 'dark' ? teamsDarkTheme : teamsLightTheme);
-        });
-      })
-      .catch(() => { /* running outside Teams, keep light theme */ });
-  }, []);
-
-  const refreshList = useCallback(async () => {
-    setLoadingList(true);
-    setErrorMsg('');
-    try {
-      const params = {};
-      if (search) params.q = search;
-      if (temperatureFilter) params.temperature = temperatureFilter;
-      if (repFilter) params.lastContactedBy = repFilter;
-      const [list, due, birthdays, repList] = await Promise.all([
-        api.listContacts(params),
-        api.dueReminders(),
-        api.upcomingBirthdays(30),
-        api.listReps(),
-      ]);
-      setContacts(list);
-      setDueContacts(due);
-      setUpcomingBirthdays(birthdays);
-      setReps(repList);
-    } catch (err) {
-      setErrorMsg(err.message || 'Could not reach the CRM backend.');
-    } finally {
-      setLoadingList(false);
-    }
-  }, [search, temperatureFilter, repFilter]);
-
-  useEffect(() => { refreshList(); }, [refreshList]);
-
-  useEffect(() => {
-    if (!selectedId) { setSelectedContact(null); return; }
-    api.getContact(selectedId).then(setSelectedContact).catch(() => setSelectedContact(null));
-  }, [selectedId, contacts]);
-
-  async function handleSaveContact(data) {
-    if (editingContact) {
-      await api.updateContact(editingContact.id, data);
-    } else {
-      const created = await api.createContact(data);
-      setSelectedId(created.id);
-    }
-    setModalOpen(false);
-    setEditingContact(null);
-    refreshList();
+async function request(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed: ${res.status}`);
   }
-
-  async function handleLogInteraction(id, data) {
-    await api.logInteraction(id, data);
-    const updated = await api.getContact(id);
-    setSelectedContact(updated);
-    refreshList();
-  }
-
-  async function handleDelete(id) {
-    if (!confirm('Remove this contact? This cannot be undone.')) return;
-    await api.deleteContact(id);
-    if (selectedId === id) setSelectedId(null);
-    refreshList();
-  }
-
-  if (userLoading) {
-    return (
-      <FluentProvider theme={theme}>
-        <div className="app-loading"><Spinner label="Loading your relationships..." /></div>
-      </FluentProvider>
-    );
-  }
-
-  return (
-    <FluentProvider theme={theme}>
-      <div className="app-shell">
-        <div className="app-tabs">
-          <TabList selectedValue={activeView} onTabSelect={(_, d) => setActiveView(d.value)}>
-            <Tab value="contacts">Contacts</Tab>
-            <Tab value="activity">Activity</Tab>
-          </TabList>
-        </div>
-
-        {activeView === 'contacts' && (
-          <>
-            <RemindersBanner
-              dueContacts={dueContacts}
-              upcomingBirthdays={upcomingBirthdays}
-              onSelect={setSelectedId}
-            />
-
-            {errorMsg && (
-              <div className="app-error">
-                {errorMsg} — showing an empty list until the backend at your configured API URL is reachable.
-              </div>
-            )}
-
-            <div className="app-body">
-              <ContactList
-                contacts={contacts}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onAdd={() => { setEditingContact(null); setModalOpen(true); }}
-                search={search}
-                onSearchChange={setSearch}
-                temperatureFilter={temperatureFilter}
-                onTemperatureFilterChange={setTemperatureFilter}
-                reps={reps}
-                repFilter={repFilter}
-                onRepFilterChange={setRepFilter}
-              />
-              <ContactDetail
-                contact={selectedContact}
-                currentUser={user}
-                onLogInteraction={handleLogInteraction}
-                onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
-                onDelete={handleDelete}
-              />
-            </div>
-          </>
-        )}
-
-        {activeView === 'activity' && (
-          <ActivityDashboard
-            onSelectContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
-          />
-        )}
-
-        <AddEditContactModal
-          open={modalOpen}
-          initial={editingContact}
-          onClose={() => { setModalOpen(false); setEditingContact(null); }}
-          onSave={handleSaveContact}
-        />
-      </div>
-    </FluentProvider>
-  );
+  if (res.status === 204) return null;
+  return res.json();
 }
+
+export const api = {
+  listContacts: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/contacts${qs ? `?${qs}` : ''}`);
+  },
+  getContact: (id) => request(`/api/contacts/${id}`),
+  createContact: (data) => request('/api/contacts', { method: 'POST', body: JSON.stringify(data) }),
+  updateContact: (id, data) => request(`/api/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteContact: (id) => request(`/api/contacts/${id}`, { method: 'DELETE' }),
+  logInteraction: (id, data) => request(`/api/contacts/${id}/interactions`, { method: 'POST', body: JSON.stringify(data) }),
+  dueReminders: () => request('/api/reminders/due'),
+  upcomingBirthdays: (withinDays = 30) => request(`/api/birthdays/upcoming?withinDays=${withinDays}`),
+  listReps: () => request('/api/reps'),
+  activitySummary: (range = 'week') => request(`/api/activity/summary?range=${range}`),
+};
