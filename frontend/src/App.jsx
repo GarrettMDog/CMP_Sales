@@ -14,7 +14,7 @@ import { api } from './api.js';
 import './styles.css';
 
 export default function App() {
-  const { user, loading: userLoading } = useTeamsUser();
+  const { user, token, loading: userLoading } = useTeamsUser();
   const [theme, setTheme] = useState(teamsLightTheme);
   const [activeView, setActiveView] = useState('contacts');
 
@@ -85,7 +85,7 @@ export default function App() {
     if (editingContact) {
       await api.updateContact(editingContact.id, data);
     } else {
-      const created = await api.createContact(data);
+      const created = await api.createContact(data, token);
       setSelectedId(created.id);
     }
     setModalOpen(false);
@@ -94,7 +94,7 @@ export default function App() {
   }
 
   async function handleLogInteraction(id, data) {
-    await api.logInteraction(id, data);
+    await api.logInteraction(id, data, token);
     const updated = await api.getContact(id);
     setSelectedContact(updated);
     refreshList();
@@ -102,7 +102,7 @@ export default function App() {
 
   async function handleDelete(id) {
     if (!confirm('Remove this contact? This cannot be undone.')) return;
-    await api.deleteContact(id);
+    await api.deleteContact(id, token);
     if (selectedId === id) setSelectedId(null);
     refreshList();
   }

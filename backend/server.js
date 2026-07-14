@@ -4,6 +4,7 @@ const cron = require('node-cron');
 const crypto = require('crypto');
 const db = require('./db');
 const { fireReminderForContact } = require('./notifications');
+const { verifyTeamsToken } = require('./auth');
 
 const app = express();
 app.use(cors());
@@ -23,6 +24,15 @@ function addDays(isoDate, days) {
 function serializeContact(row) {
   return row; // flat row is already client-friendly
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/me
+// Returns the verified caller's identity (name + email) based on their
+// Teams SSO token. Replaces trusting whatever the frontend claims.
+// ---------------------------------------------------------------------------
+app.get('/api/me', verifyTeamsToken, (req, res) => {
+  res.json(req.teamsUser);
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/contacts  (list, with optional filters)
@@ -70,9 +80,9 @@ app.get('/api/contacts/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/contacts  (create)
+// POST /api/contacts  (create) — requires a verified token
 // ---------------------------------------------------------------------------
-app.post('/api/contacts', (req, res) => {
+app.post('/api/contacts', verifyTeamsToken, (req, res) => {
   const {
     name, company, role, email, phone, birthday,
     howYouKnowThem, referralSource, temperature, recurrenceDays,
@@ -100,9 +110,9 @@ app.post('/api/contacts', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/contacts/:id  (edit core fields)
+// PUT /api/contacts/:id  (edit core fields) — requires a verified token
 // ---------------------------------------------------------------------------
-app.put('/api/contacts/:id', (req, res) => {
+app.put('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   const existing = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Contact not found' });
 
@@ -127,24 +137,28 @@ app.put('/api/contacts/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/contacts/:id
+// DELETE /api/contacts/:id — requires a verified token
 // ---------------------------------------------------------------------------
-app.delete('/api/contacts/:id', (req, res) => {
+app.delete('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   db.prepare('DELETE FROM interactions WHERE contactId = ?').run(req.params.id);
   db.prepare('DELETE FROM contacts WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/contacts/:id/interactions
+// POST /api/contacts/:id/interactions — requires a verified token
 // Logging an interaction is what moves "who gets the reminder" — it's always
-// whoever just logged the touchpoint, not a fixed assigned rep.
+// whoever just logged the touchpoint, not a fixed assigned rep. The author
+// name/email now come from the verified token, not the request body.
 // ---------------------------------------------------------------------------
-app.post('/api/contacts/:id/interactions', (req, res) => {
+app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
   const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
 
-  const { authorName, authorEmail, type, note, occurredAt } = req.body;
+  const { type, note, occurredAt } = req.body;
+  const authorName = req.teamsUser.name;
+  const authorEmail = req.teamsUser.email;
+
   if (!authorName || !type) {
     return res.status(400).json({ error: 'authorName and type are required' });
   }
@@ -171,9 +185,6 @@ app.post('/api/contacts/:id/interactions', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/reps
-// Distinct list of reps who have ever logged an interaction — pulled straight
-// from the interactions table (auto-populated by Teams identity), so there's
-// no separate "rep management" screen to maintain.
 // ---------------------------------------------------------------------------
 app.get('/api/reps', (req, res) => {
   const rows = db.prepare(`
@@ -187,8 +198,6 @@ app.get('/api/reps', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/activity/summary?range=week|month
-// Per-rep touchpoint counts within the selected window, plus a breakdown by
-// interaction type — powers the activity dashboard.
 // ---------------------------------------------------------------------------
 app.get('/api/activity/summary', (req, res) => {
   const range = req.query.range === 'month' ? 30 : 7;
@@ -234,7 +243,7 @@ app.get('/api/activity/summary', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/reminders/due  (used by the frontend "needs follow-up" banner too)
+// GET /api/reminders/due
 // ---------------------------------------------------------------------------
 app.get('/api/reminders/due', (req, res) => {
   const now = new Date().toISOString();
@@ -267,8 +276,7 @@ app.get('/api/birthdays/upcoming', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Manual trigger, useful for testing the reminder pipeline without waiting
-// for the cron job.
+// Manual reminder sweep trigger, for testing.
 // ---------------------------------------------------------------------------
 app.post('/api/reminders/run-now', async (req, res) => {
   const results = await runReminderSweep();
@@ -289,7 +297,7 @@ async function runReminderSweep() {
   return results;
 }
 
-// Daily sweep at 8:00 AM server time — adjust the cron expression as needed.
+// Daily sweep at 8:00 AM server time.
 cron.schedule('0 8 * * *', () => {
   runReminderSweep().catch((err) => console.error('Reminder sweep failed:', err));
 });

@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "id": "3f0ff8bc-9197-428b-9d2f-88f84684f718",
   "developer": {
     "name": "Your Company",
@@ -38,6 +38,10 @@
       "scopes": ["team", "groupChat"]
     }
   ],
+  "webApplicationInfo": {
+    "id": "faa6023c-5645-440e-bc4a-f760ee262f4b",
+    "resource": "api://cmp-sales.vercel.app/faa6023c-5645-440e-bc4a-f760ee262f4b"
+  },
   "permissions": ["identity", "messageTeamMembers"],
   "validDomains": ["cmp-sales.vercel.app"]
 }
