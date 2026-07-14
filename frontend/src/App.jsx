@@ -83,7 +83,7 @@ export default function App() {
 
   async function handleSaveContact(data) {
     if (editingContact) {
-      await api.updateContact(editingContact.id, data);
+      await api.updateContact(editingContact.id, data, token);
     } else {
       const created = await api.createContact(data, token);
       setSelectedId(created.id);
