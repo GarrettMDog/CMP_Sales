@@ -2,12 +2,12 @@
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
   "version": "1.0.0",
-  "id": "00000000-0000-0000-0000-000000000000",
+  "id": "3f0ff8bc-9197-428b-9d2f-88f84684f718",
   "developer": {
     "name": "Your Company",
-    "websiteUrl": "https://example.com",
-    "privacyUrl": "https://example.com/privacy",
-    "termsOfUseUrl": "https://example.com/terms"
+    "websiteUrl": "https://cmp-sales.vercel.app",
+    "privacyUrl": "https://cmp-sales.vercel.app/privacy",
+    "termsOfUseUrl": "https://cmp-sales.vercel.app/terms"
   },
   "icons": {
     "color": "color.png",
@@ -26,18 +26,18 @@
     {
       "entityId": "relationshipCrmHome",
       "name": "Contacts",
-      "contentUrl": "https://REPLACE_WITH_YOUR_DEPLOYED_URL/",
-      "websiteUrl": "https://REPLACE_WITH_YOUR_DEPLOYED_URL/",
+      "contentUrl": "https://cmp-sales.vercel.app/",
+      "websiteUrl": "https://cmp-sales.vercel.app/",
       "scopes": ["personal"]
     }
   ],
   "configurableTabs": [
     {
-      "configurationUrl": "https://REPLACE_WITH_YOUR_DEPLOYED_URL/config.html",
+      "configurationUrl": "https://cmp-sales.vercel.app/config.html",
       "canUpdateConfiguration": true,
       "scopes": ["team", "groupChat"]
     }
   ],
   "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": ["REPLACE_WITH_YOUR_DEPLOYED_URL"]
+  "validDomains": ["cmp-sales.vercel.app"]
 }
