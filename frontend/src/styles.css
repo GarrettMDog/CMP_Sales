@@ -492,7 +492,7 @@ body {
   }
   .wide-dialog {
   max-width: 640px;
-  width: 90vw;
+  width: 120vw;
 }
   .modal-grid {
     grid-template-columns: 1fr;
