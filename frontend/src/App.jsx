@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   FluentProvider, teamsLightTheme, teamsDarkTheme, Spinner, TabList, Tab,
+  Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions, Button,
 } from '@fluentui/react-components';
 import { app } from '@microsoft/teams-js';
 
@@ -29,6 +30,7 @@ export default function App() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   const [dueContacts, setDueContacts] = useState([]);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
@@ -100,12 +102,17 @@ export default function App() {
     refreshList();
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Remove this contact? This cannot be undone.')) return;
-    await api.deleteContact(id, token);
-    if (selectedId === id) setSelectedId(null);
-    refreshList();
-  }
+ function handleDelete(id) {
+  setDeleteTargetId(id);
+}
+
+async function confirmDelete() {
+  const id = deleteTargetId;
+  setDeleteTargetId(null);
+  await api.deleteContact(id, token);
+  if (selectedId === id) setSelectedId(null);
+  refreshList();
+}
 
   if (userLoading) {
     return (
@@ -176,6 +183,20 @@ export default function App() {
           onClose={() => { setModalOpen(false); setEditingContact(null); }}
           onSave={handleSaveContact}
         />
+
+         <Dialog open={!!deleteTargetId} onOpenChange={(_, data) => { if (!data.open) setDeleteTargetId(null); }}>
+          <DialogSurface>
+           <DialogBody>
+             <DialogTitle>Remove this contact?</DialogTitle>
+             <DialogContent>This cannot be undone.</DialogContent>
+             <DialogActions>
+        <Button appearance="secondary" onClick={() => setDeleteTargetId(null)}>Cancel</Button>
+        <Button appearance="primary" onClick={confirmDelete}>Delete</Button>
+      </DialogActions>
+    </DialogBody>
+  </DialogSurface>
+</Dialog>
+
       </div>
     </FluentProvider>
   );
