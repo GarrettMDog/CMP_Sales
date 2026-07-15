@@ -13,6 +13,7 @@ html, body, #root {
 
 body {
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  color: var(--colorNeutralForeground1);
 }
 
 .app-shell {
