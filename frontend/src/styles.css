@@ -495,6 +495,10 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--colorNeutralStroke2);
   }
+  .contact-detail--empty {
+  flex: 0 0 auto;
+  padding: 32px 16px;
+}
   
   .modal-grid {
     grid-template-columns: 1fr;
