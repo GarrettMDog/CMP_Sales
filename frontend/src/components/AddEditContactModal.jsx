@@ -65,7 +65,7 @@ export default function AddEditContactModal({ open, onClose, onSave, initial }) 
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) onClose(); }}>
-      <DialogSurface>
+      <DialogSurface className="wide-dialog">
         <DialogBody>
           <DialogTitle>{initial ? 'Edit contact' : 'Add a contact'}</DialogTitle>
           <DialogContent className="modal-grid">
