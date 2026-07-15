@@ -491,8 +491,8 @@ body {
     border-bottom: 1px solid var(--colorNeutralStroke2);
   }
   .wide-dialog {
-  max-width: 640px !important;
-  width: 90vw !important;
+  max-width: 830px !important;
+  width: 97vw !important;
 }
   .modal-grid {
     grid-template-columns: 1fr;
