@@ -480,6 +480,11 @@ body {
   gap: 8px;
 }
 
+.wide-dialog {
+  max-width: 830px !important;
+  width: 97vw !important;
+}
+
 @media (max-width: 700px) {
   .app-body {
     flex-direction: column;
@@ -490,10 +495,7 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--colorNeutralStroke2);
   }
-  .wide-dialog {
-  max-width: 830px !important;
-  width: 97vw !important;
-}
+  
   .modal-grid {
     grid-template-columns: 1fr;
     min-width: unset;
