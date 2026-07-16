@@ -1,7 +1,11 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'crm.db'));
+// In production, DB_PATH points at the persistent disk's mount path (e.g.
+// /data/crm.db) so the database survives deploys and restarts. Locally, it
+// falls back to a file right next to this script, same as before.
+const dbPath = process.env.DB_PATH || path.join(__dirname, 'crm.db');
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 // --- Schema ---------------------------------------------------------------
