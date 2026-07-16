@@ -60,10 +60,10 @@ export default function App() {
       if (temperatureFilter) params.temperature = temperatureFilter;
       if (repFilter) params.lastContactedBy = repFilter;
       const [list, due, birthdays, repList] = await Promise.all([
-        api.listContacts(params),
-        api.dueReminders(),
-        api.upcomingBirthdays(30),
-        api.listReps(),
+        api.listContacts(params, token),
+        api.dueReminders(token),
+        api.upcomingBirthdays(30, token),
+        api.listReps(token),
       ]);
       setContacts(list);
       setDueContacts(due);
@@ -74,13 +74,13 @@ export default function App() {
     } finally {
       setLoadingList(false);
     }
-  }, [search, temperatureFilter, repFilter]);
+  }, [search, temperatureFilter, repFilter, token]);
 
   useEffect(() => { refreshList(); }, [refreshList]);
 
   useEffect(() => {
     if (!selectedId) { setSelectedContact(null); return; }
-    api.getContact(selectedId).then(setSelectedContact).catch(() => setSelectedContact(null));
+    api.getContact(selectedId, token).then(setSelectedContact).catch(() => setSelectedContact(null));
   }, [selectedId, contacts]);
 
   async function handleSaveContact(data) {
@@ -97,7 +97,7 @@ export default function App() {
 
   async function handleLogInteraction(id, data) {
     await api.logInteraction(id, data, token);
-    const updated = await api.getContact(id);
+    const updated = await api.getContact(id, token);
     setSelectedContact(updated);
     refreshList();
   }
@@ -174,6 +174,7 @@ async function confirmDelete() {
         {activeView === 'activity' && (
           <ActivityDashboard
             onSelectContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
+            token={token}
           />
         )}
 

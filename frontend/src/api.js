@@ -18,14 +18,13 @@ async function request(path, options = {}, token) {
 }
 
 export const api = {
-  listContacts: (params = {}) => {
+  // Reads now require a token too, since the backend's read routes are secured.
+  listContacts: (params = {}, token) => {
     const qs = new URLSearchParams(params).toString();
-    return request(`/api/contacts${qs ? `?${qs}` : ''}`);
+    return request(`/api/contacts${qs ? `?${qs}` : ''}`, {}, token);
   },
-  getContact: (id) => request(`/api/contacts/${id}`),
+  getContact: (id, token) => request(`/api/contacts/${id}`, {}, token),
 
-  // These write endpoints now require a verified SSO token — pass it in as
-  // the last argument from wherever useTeamsUser() is already called.
   createContact: (data, token) =>
     request('/api/contacts', { method: 'POST', body: JSON.stringify(data) }, token),
   updateContact: (id, data, token) =>
@@ -34,9 +33,13 @@ export const api = {
     request(`/api/contacts/${id}`, { method: 'DELETE' }, token),
   logInteraction: (id, data, token) =>
     request(`/api/contacts/${id}/interactions`, { method: 'POST', body: JSON.stringify(data) }, token),
+  updateInteraction: (id, data, token) =>
+    request(`/api/interactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
 
-  dueReminders: () => request('/api/reminders/due'),
-  upcomingBirthdays: (withinDays = 30) => request(`/api/birthdays/upcoming?withinDays=${withinDays}`),
-  listReps: () => request('/api/reps'),
-  activitySummary: (range = 'week') => request(`/api/activity/summary?range=${range}`),
+  dueReminders: (token) => request('/api/reminders/due', {}, token),
+  upcomingBirthdays: (withinDays = 30, token) =>
+    request(`/api/birthdays/upcoming?withinDays=${withinDays}`, {}, token),
+  listReps: (token) => request('/api/reps', {}, token),
+  activitySummary: (range = 'week', token) =>
+    request(`/api/activity/summary?range=${range}`, {}, token),
 };

@@ -7,7 +7,10 @@ const { fireReminderForContact } = require('./notifications');
 const { verifyTeamsToken } = require('./auth');
 
 const app = express();
-app.use(cors());
+
+// SECURITY FIX #2: only allow requests from the actual frontend, not any website.
+app.use(cors({ origin: 'https://cmp-sales.vercel.app' }));
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -27,8 +30,6 @@ function serializeContact(row) {
 
 // ---------------------------------------------------------------------------
 // GET /api/me
-// Returns the verified caller's identity (name + email) based on their
-// Teams SSO token. Replaces trusting whatever the frontend claims.
 // ---------------------------------------------------------------------------
 app.get('/api/me', verifyTeamsToken, (req, res) => {
   res.json(req.teamsUser);
@@ -36,8 +37,9 @@ app.get('/api/me', verifyTeamsToken, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/contacts  (list, with optional filters)
+// SECURITY FIX #1: now requires a verified token, same as the write routes.
 // ---------------------------------------------------------------------------
-app.get('/api/contacts', (req, res) => {
+app.get('/api/contacts', verifyTeamsToken, (req, res) => {
   const { q, temperature, overdue, lastContactedBy } = req.query;
   let sql = 'SELECT * FROM contacts WHERE 1=1';
   const params = [];
@@ -68,7 +70,7 @@ app.get('/api/contacts', (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/contacts/:id  (with interaction history)
 // ---------------------------------------------------------------------------
-app.get('/api/contacts/:id', (req, res) => {
+app.get('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
 
@@ -80,7 +82,7 @@ app.get('/api/contacts/:id', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/contacts  (create) — requires a verified token
+// POST /api/contacts  (create)
 // ---------------------------------------------------------------------------
 app.post('/api/contacts', verifyTeamsToken, (req, res) => {
   const {
@@ -110,7 +112,7 @@ app.post('/api/contacts', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/contacts/:id  (edit core fields) — requires a verified token
+// PUT /api/contacts/:id  (edit core fields)
 // ---------------------------------------------------------------------------
 app.put('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   const existing = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
@@ -127,7 +129,6 @@ app.put('/api/contacts/:id', verifyTeamsToken, (req, res) => {
       .run(...Object.values(updates), req.params.id);
   }
 
-  // If recurrence changed and we have a last-contacted date, recompute the next reminder.
   if (updates.recurrenceDays && existing.lastContactedAt) {
     const nextReminderAt = addDays(existing.lastContactedAt, updates.recurrenceDays);
     db.prepare('UPDATE contacts SET nextReminderAt = ? WHERE id = ?').run(nextReminderAt, req.params.id);
@@ -137,7 +138,7 @@ app.put('/api/contacts/:id', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/contacts/:id — requires a verified token
+// DELETE /api/contacts/:id
 // ---------------------------------------------------------------------------
 app.delete('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   db.prepare('DELETE FROM interactions WHERE contactId = ?').run(req.params.id);
@@ -146,10 +147,7 @@ app.delete('/api/contacts/:id', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/contacts/:id/interactions — requires a verified token
-// Logging an interaction is what moves "who gets the reminder" — it's always
-// whoever just logged the touchpoint, not a fixed assigned rep. The author
-// name/email now come from the verified token, not the request body.
+// POST /api/contacts/:id/interactions
 // ---------------------------------------------------------------------------
 app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
   const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
@@ -185,8 +183,9 @@ app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/reps
+// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
-app.get('/api/reps', (req, res) => {
+app.get('/api/reps', verifyTeamsToken, (req, res) => {
   const rows = db.prepare(`
     SELECT authorName as name, authorEmail as email, COUNT(*) as totalInteractions, MAX(occurredAt) as lastActive
     FROM interactions
@@ -198,8 +197,9 @@ app.get('/api/reps', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/activity/summary?range=week|month
+// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
-app.get('/api/activity/summary', (req, res) => {
+app.get('/api/activity/summary', verifyTeamsToken, (req, res) => {
   const range = req.query.range === 'month' ? 30 : 7;
   const since = new Date();
   since.setDate(since.getDate() - range);
@@ -244,8 +244,9 @@ app.get('/api/activity/summary', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/reminders/due
+// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
-app.get('/api/reminders/due', (req, res) => {
+app.get('/api/reminders/due', verifyTeamsToken, (req, res) => {
   const now = new Date().toISOString();
   const rows = db.prepare(
     'SELECT * FROM contacts WHERE nextReminderAt IS NOT NULL AND nextReminderAt <= ? ORDER BY nextReminderAt ASC'
@@ -255,8 +256,9 @@ app.get('/api/reminders/due', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/birthdays/upcoming?withinDays=30
+// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
-app.get('/api/birthdays/upcoming', (req, res) => {
+app.get('/api/birthdays/upcoming', verifyTeamsToken, (req, res) => {
   const withinDays = Number(req.query.withinDays || 30);
   const rows = db.prepare("SELECT * FROM contacts WHERE birthday IS NOT NULL AND birthday != ''").all();
 
@@ -276,7 +278,7 @@ app.get('/api/birthdays/upcoming', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Manual reminder sweep trigger, for testing.
+// Manual reminder sweep trigger.
 // ---------------------------------------------------------------------------
 app.post('/api/reminders/run-now', async (req, res) => {
   const results = await runReminderSweep();
@@ -302,6 +304,8 @@ cron.schedule('0 8 * * *', () => {
   runReminderSweep().catch((err) => console.error('Reminder sweep failed:', err));
 });
 
+// Health check stays public/unauthenticated on purpose — it's just used to
+// confirm the server is up (e.g. after a deploy), not to read any data.
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(PORT, () => {

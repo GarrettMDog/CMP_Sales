@@ -22,7 +22,7 @@ function formatDateTime(iso) {
     + ' · ' + new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-export default function ActivityDashboard({ onSelectContact }) {
+export default function ActivityDashboard({ onSelectContact, token }) {
   const [range, setRange] = useState('week');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,12 +31,12 @@ export default function ActivityDashboard({ onSelectContact }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api.activitySummary(range)
+    api.activitySummary(range, token)
       .then((res) => { if (!cancelled) setData(res); })
       .catch((err) => { if (!cancelled) setError(err.message || 'Could not load activity.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [range]);
+  }, [range, token]);
 
   const maxTouchpoints = data && data.perRep.length > 0
     ? Math.max(...data.perRep.map((r) => r.touchpoints))
