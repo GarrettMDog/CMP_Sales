@@ -29,6 +29,7 @@ export default function ActivityDashboard({ onSelectContact, token }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!token) return;
     let cancelled = false;
     setLoading(true);
     api.activitySummary(range, token)

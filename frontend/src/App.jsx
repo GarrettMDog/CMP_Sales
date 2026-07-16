@@ -76,12 +76,15 @@ export default function App() {
     }
   }, [search, temperatureFilter, repFilter, token]);
 
-  useEffect(() => { refreshList(); }, [refreshList]);
+  useEffect(() => {
+  if (!token) return;
+  refreshList();
+}, [refreshList, token]);
 
   useEffect(() => {
-    if (!selectedId) { setSelectedContact(null); return; }
-    api.getContact(selectedId, token).then(setSelectedContact).catch(() => setSelectedContact(null));
-  }, [selectedId, contacts]);
+  if (!selectedId || !token) { setSelectedContact(null); return; }
+  api.getContact(selectedId, token).then(setSelectedContact).catch(() => setSelectedContact(null));
+}, [selectedId, contacts, token]);
 
   async function handleSaveContact(data) {
     if (editingContact) {
