@@ -8,9 +8,7 @@ const { verifyTeamsToken } = require('./auth');
 
 const app = express();
 
-// SECURITY FIX #2: only allow requests from the actual frontend, not any website.
 app.use(cors({ origin: 'https://cmp-sales.vercel.app' }));
-
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -25,7 +23,7 @@ function addDays(isoDate, days) {
 }
 
 function serializeContact(row) {
-  return row; // flat row is already client-friendly
+  return row;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,7 +35,6 @@ app.get('/api/me', verifyTeamsToken, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/contacts  (list, with optional filters)
-// SECURITY FIX #1: now requires a verified token, same as the write routes.
 // ---------------------------------------------------------------------------
 app.get('/api/contacts', verifyTeamsToken, (req, res) => {
   const { q, temperature, overdue, lastContactedBy } = req.query;
@@ -182,8 +179,32 @@ app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /api/interactions/:id — edit a previously logged interaction's note/type.
+// ---------------------------------------------------------------------------
+app.put('/api/interactions/:id', verifyTeamsToken, (req, res) => {
+  const interaction = db.prepare('SELECT * FROM interactions WHERE id = ?').get(req.params.id);
+  if (!interaction) return res.status(404).json({ error: 'Interaction not found' });
+
+  const { type, note } = req.body;
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE interactions
+    SET type = ?, note = ?, editedAt = ?
+    WHERE id = ?
+  `).run(
+    type || interaction.type,
+    note !== undefined ? note : interaction.note,
+    now,
+    req.params.id
+  );
+
+  const updated = db.prepare('SELECT * FROM interactions WHERE id = ?').get(req.params.id);
+  res.json(updated);
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/reps
-// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
 app.get('/api/reps', verifyTeamsToken, (req, res) => {
   const rows = db.prepare(`
@@ -197,7 +218,6 @@ app.get('/api/reps', verifyTeamsToken, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/activity/summary?range=week|month
-// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
 app.get('/api/activity/summary', verifyTeamsToken, (req, res) => {
   const range = req.query.range === 'month' ? 30 : 7;
@@ -244,7 +264,6 @@ app.get('/api/activity/summary', verifyTeamsToken, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/reminders/due
-// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
 app.get('/api/reminders/due', verifyTeamsToken, (req, res) => {
   const now = new Date().toISOString();
@@ -256,7 +275,6 @@ app.get('/api/reminders/due', verifyTeamsToken, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/birthdays/upcoming?withinDays=30
-// SECURITY FIX #1: now requires a verified token.
 // ---------------------------------------------------------------------------
 app.get('/api/birthdays/upcoming', verifyTeamsToken, (req, res) => {
   const withinDays = Number(req.query.withinDays || 30);
@@ -299,13 +317,10 @@ async function runReminderSweep() {
   return results;
 }
 
-// Daily sweep at 8:00 AM server time.
 cron.schedule('0 8 * * *', () => {
   runReminderSweep().catch((err) => console.error('Reminder sweep failed:', err));
 });
 
-// Health check stays public/unauthenticated on purpose — it's just used to
-// confirm the server is up (e.g. after a deploy), not to read any data.
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(PORT, () => {

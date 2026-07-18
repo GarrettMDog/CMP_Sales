@@ -27,9 +27,19 @@ function initials(name) {
   return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 }
 
+// mm/dd/yy hh:mm AM/PM — e.g. "07/16/26 03:45 PM"
 function formatDate(iso) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  let hours = d.getHours();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  const hh = String(hours).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd}/${yy} ${hh}:${min} ${ampm}`;
 }
 
 function formatBirthday(mmdd) {
@@ -40,11 +50,14 @@ function formatBirthday(mmdd) {
 }
 
 export default function ContactDetail({
-  contact, currentUser, onLogInteraction, onEdit, onDelete,
+  contact, currentUser, onLogInteraction, onEditInteraction, onEdit, onDelete,
 }) {
   const [type, setType] = useState('call');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [editingInteractionId, setEditingInteractionId] = useState(null);
+  const [editingNote, setEditingNote] = useState('');
 
   if (!contact) {
     return (
@@ -155,8 +168,48 @@ export default function ContactDetail({
                 <strong>{i.authorName}</strong>
                 <span className="timeline-item__type">{TYPE_LABELS[i.type] || i.type}</span>
                 <span className="timeline-item__date">{formatDate(i.occurredAt)}</span>
+                {i.editedAt && <span className="timeline-item__edited">(edited)</span>}
+                {editingInteractionId !== i.id && (
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    icon={<Edit24Regular />}
+                    onClick={() => { setEditingInteractionId(i.id); setEditingNote(i.note || ''); }}
+                  >
+                    Edit
+                  </Button>
+                )}
               </div>
-              {i.note && <p>{i.note}</p>}
+
+              {editingInteractionId === i.id ? (
+                <div className="timeline-item__edit">
+                  <Textarea
+                    value={editingNote}
+                    onChange={(_, d) => setEditingNote(d.value)}
+                  />
+                  <div className="timeline-item__edit-actions">
+                    <Button
+                      size="small"
+                      appearance="secondary"
+                      onClick={() => setEditingInteractionId(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="small"
+                      appearance="primary"
+                      onClick={async () => {
+                        await onEditInteraction(i.id, { note: editingNote });
+                        setEditingInteractionId(null);
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                i.note && <p>{i.note}</p>
+              )}
             </div>
           </div>
         ))}

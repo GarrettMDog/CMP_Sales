@@ -18,7 +18,6 @@ async function request(path, options = {}, token) {
 }
 
 export const api = {
-  // Reads now require a token too, since the backend's read routes are secured.
   listContacts: (params = {}, token) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/api/contacts${qs ? `?${qs}` : ''}`, {}, token);

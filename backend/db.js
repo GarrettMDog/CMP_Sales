@@ -3,7 +3,7 @@ const path = require('path');
 
 // In production, DB_PATH points at the persistent disk's mount path (e.g.
 // /data/crm.db) so the database survives deploys and restarts. Locally, it
-// falls back to a file right next to this script, same as before.
+// falls back to a file right next to this script.
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'crm.db');
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
@@ -49,5 +49,14 @@ CREATE TABLE IF NOT EXISTS reminder_log (
   FOREIGN KEY (contactId) REFERENCES contacts(id)
 );
 `);
+
+// Safe migration: add an "editedAt" column to interactions if it doesn't
+// already exist. Lets us track whether a logged interaction was edited after
+// the fact, without breaking any database that was already running.
+const interactionColumns = db.prepare("PRAGMA table_info(interactions)").all();
+const hasEditedAt = interactionColumns.some((col) => col.name === 'editedAt');
+if (!hasEditedAt) {
+  db.exec('ALTER TABLE interactions ADD COLUMN editedAt TEXT');
+}
 
 module.exports = db;

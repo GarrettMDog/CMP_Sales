@@ -76,15 +76,17 @@ export default function App() {
     }
   }, [search, temperatureFilter, repFilter, token]);
 
+  // Don't fetch anything until a real SSO token actually exists — avoids a
+  // premature, token-less request flashing an auth error on first load.
   useEffect(() => {
-  if (!token) return;
-  refreshList();
-}, [refreshList, token]);
+    if (!token) return;
+    refreshList();
+  }, [refreshList, token]);
 
   useEffect(() => {
-  if (!selectedId || !token) { setSelectedContact(null); return; }
-  api.getContact(selectedId, token).then(setSelectedContact).catch(() => setSelectedContact(null));
-}, [selectedId, contacts, token]);
+    if (!selectedId || !token) { setSelectedContact(null); return; }
+    api.getContact(selectedId, token).then(setSelectedContact).catch(() => setSelectedContact(null));
+  }, [selectedId, contacts, token]);
 
   async function handleSaveContact(data) {
     if (editingContact) {
@@ -105,17 +107,23 @@ export default function App() {
     refreshList();
   }
 
- function handleDelete(id) {
-  setDeleteTargetId(id);
-}
+  async function handleEditInteraction(interactionId, data) {
+    await api.updateInteraction(interactionId, data, token);
+    const updated = await api.getContact(selectedId, token);
+    setSelectedContact(updated);
+  }
 
-async function confirmDelete() {
-  const id = deleteTargetId;
-  setDeleteTargetId(null);
-  await api.deleteContact(id, token);
-  if (selectedId === id) setSelectedId(null);
-  refreshList();
-}
+  function handleDelete(id) {
+    setDeleteTargetId(id);
+  }
+
+  async function confirmDelete() {
+    const id = deleteTargetId;
+    setDeleteTargetId(null);
+    await api.deleteContact(id, token);
+    if (selectedId === id) setSelectedId(null);
+    refreshList();
+  }
 
   if (userLoading) {
     return (
@@ -167,6 +175,7 @@ async function confirmDelete() {
                 contact={selectedContact}
                 currentUser={user}
                 onLogInteraction={handleLogInteraction}
+                onEditInteraction={handleEditInteraction}
                 onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
                 onDelete={handleDelete}
               />
@@ -188,19 +197,18 @@ async function confirmDelete() {
           onSave={handleSaveContact}
         />
 
-         <Dialog open={!!deleteTargetId} onOpenChange={(_, data) => { if (!data.open) setDeleteTargetId(null); }}>
+        <Dialog open={!!deleteTargetId} onOpenChange={(_, data) => { if (!data.open) setDeleteTargetId(null); }}>
           <DialogSurface>
-           <DialogBody>
-             <DialogTitle>Remove this contact?</DialogTitle>
-             <DialogContent>This cannot be undone.</DialogContent>
-             <DialogActions>
-        <Button appearance="secondary" onClick={() => setDeleteTargetId(null)}>Cancel</Button>
-        <Button appearance="primary" onClick={confirmDelete}>Delete</Button>
-      </DialogActions>
-    </DialogBody>
-  </DialogSurface>
-</Dialog>
-
+            <DialogBody>
+              <DialogTitle>Remove this contact?</DialogTitle>
+              <DialogContent>This cannot be undone.</DialogContent>
+              <DialogActions>
+                <Button appearance="secondary" onClick={() => setDeleteTargetId(null)}>Cancel</Button>
+                <Button appearance="primary" onClick={confirmDelete}>Delete</Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
       </div>
     </FluentProvider>
   );
