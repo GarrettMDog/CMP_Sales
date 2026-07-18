@@ -417,6 +417,73 @@ body {
   margin: 12px 0;
 }
 
+/* Add these rules to frontend/src/styles.css — anywhere in the file, e.g.
+   right after the existing .contact-detail rules is a natural spot. */
+
+.message-search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--colorNeutralBackground2);
+}
+
+.message-search-results h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.message-match {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: var(--colorNeutralBackground1);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.message-match:hover {
+  background: var(--colorNeutralBackground1Hover);
+}
+
+.message-match__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-match__top {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.message-match__meta {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.message-match__snippet {
+  margin: 0;
+  font-size: 13px;
+  color: var(--colorNeutralForeground2);
+  line-height: 1.4;
+}
+
+.search-highlight {
+  background: var(--colorPaletteYellowBackground2);
+  color: var(--colorNeutralForeground1);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+@media (max-width: 700px) {
+  .message-search-results {
+    padding: 16px;
+  }
+}
+
 .log-interaction {
   display: flex;
   flex-direction: column;

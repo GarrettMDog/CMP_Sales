@@ -10,6 +10,7 @@ import ContactDetail from './components/ContactDetail.jsx';
 import AddEditContactModal from './components/AddEditContactModal.jsx';
 import RemindersBanner from './components/RemindersBanner.jsx';
 import ActivityDashboard from './components/ActivityDashboard.jsx';
+import MessageSearchResults from './components/MessageSearchResults.jsx';
 import { useTeamsUser } from './useTeamsUser.js';
 import { api } from './api.js';
 import './styles.css';
@@ -27,6 +28,11 @@ export default function App() {
   const [temperatureFilter, setTemperatureFilter] = useState('');
   const [repFilter, setRepFilter] = useState('');
   const [reps, setReps] = useState([]);
+
+  // Tier 3 Search History — matching messages, shown in the same panel slot
+  // ContactDetail normally occupies (right on desktop, bottom on mobile).
+  const [messageResults, setMessageResults] = useState([]);
+  const [messageSearchLoading, setMessageSearchLoading] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
@@ -76,12 +82,26 @@ export default function App() {
     }
   }, [search, temperatureFilter, repFilter, token]);
 
-  // Don't fetch anything until a real SSO token actually exists — avoids a
-  // premature, token-less request flashing an auth error on first load.
   useEffect(() => {
     if (!token) return;
     refreshList();
   }, [refreshList, token]);
+
+  // Tier 3 Search History: whenever the search box has text in it, also
+  // search message content and show matches in the detail panel slot.
+  useEffect(() => {
+    if (!token || !search.trim()) {
+      setMessageResults([]);
+      return;
+    }
+    let cancelled = false;
+    setMessageSearchLoading(true);
+    api.searchMessages(search.trim(), token)
+      .then((results) => { if (!cancelled) setMessageResults(results); })
+      .catch(() => { if (!cancelled) setMessageResults([]); })
+      .finally(() => { if (!cancelled) setMessageSearchLoading(false); });
+    return () => { cancelled = true; };
+  }, [search, token]);
 
   useEffect(() => {
     if (!selectedId || !token) { setSelectedContact(null); return; }
@@ -125,6 +145,13 @@ export default function App() {
     refreshList();
   }
 
+  // Clicking a message match jumps to that contact and clears the search,
+  // so the panel drops back into the normal single-contact detail view.
+  function handleSelectFromMessageSearch(contactId) {
+    setSearch('');
+    setSelectedId(contactId);
+  }
+
   if (userLoading) {
     return (
       <FluentProvider theme={theme}>
@@ -132,6 +159,8 @@ export default function App() {
       </FluentProvider>
     );
   }
+
+  const showMessageSearch = search.trim().length > 0;
 
   return (
     <FluentProvider theme={theme}>
@@ -171,14 +200,24 @@ export default function App() {
                 repFilter={repFilter}
                 onRepFilterChange={setRepFilter}
               />
-              <ContactDetail
-                contact={selectedContact}
-                currentUser={user}
-                onLogInteraction={handleLogInteraction}
-                onEditInteraction={handleEditInteraction}
-                onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
-                onDelete={handleDelete}
-              />
+
+              {showMessageSearch ? (
+                <MessageSearchResults
+                  query={search.trim()}
+                  results={messageResults}
+                  loading={messageSearchLoading}
+                  onSelectContact={handleSelectFromMessageSearch}
+                />
+              ) : (
+                <ContactDetail
+                  contact={selectedContact}
+                  currentUser={user}
+                  onLogInteraction={handleLogInteraction}
+                  onEditInteraction={handleEditInteraction}
+                  onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>
           </>
         )}

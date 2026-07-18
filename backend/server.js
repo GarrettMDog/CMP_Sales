@@ -296,6 +296,35 @@ app.get('/api/birthdays/upcoming', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/messages/search?q=...
+// Searches across ALL logged interaction notes (not just contact fields),
+// joined with contacts so each result includes who it belongs to. Powers
+// the Search History feature — surfaces individual matching messages, most
+// recent first, regardless of which contact they belong to.
+//
+// Add this route in backend/server.js, anywhere alongside the other routes
+// (right after GET /api/birthdays/upcoming is a natural spot).
+// ---------------------------------------------------------------------------
+app.get('/api/messages/search', verifyTeamsToken, (req, res) => {
+  const { q } = req.query;
+  if (!q || !q.trim()) return res.json([]);
+
+  const like = `%${q.trim()}%`;
+  const rows = db.prepare(`
+    SELECT
+      i.id, i.contactId, i.authorName, i.type, i.note, i.occurredAt,
+      c.name as contactName, c.company as contactCompany
+    FROM interactions i
+    JOIN contacts c ON c.id = i.contactId
+    WHERE i.note LIKE ?
+    ORDER BY i.occurredAt DESC
+    LIMIT 50
+  `).all(like);
+
+  res.json(rows);
+});
+
+// ---------------------------------------------------------------------------
 // Manual reminder sweep trigger.
 // ---------------------------------------------------------------------------
 app.post('/api/reminders/run-now', async (req, res) => {

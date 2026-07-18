@@ -41,4 +41,8 @@ export const api = {
   listReps: (token) => request('/api/reps', {}, token),
   activitySummary: (range = 'week', token) =>
     request(`/api/activity/summary?range=${range}`, {}, token),
+
+  // Tier 3 Search History — searches message content, not just contact fields.
+  searchMessages: (query, token) =>
+    request(`/api/messages/search?q=${encodeURIComponent(query)}`, {}, token),
 };
