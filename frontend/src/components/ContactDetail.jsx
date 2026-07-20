@@ -42,6 +42,16 @@ function formatDate(iso) {
   return `${mm}/${dd}/${yy} ${hh}:${min} ${ampm}`;
 }
 
+// Same as formatDate, but without the time — used just for the reminder due-date line.
+function formatDateOnly(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}/${dd}/${yy}`;
+}
+
 function formatBirthday(mmdd) {
   if (!mmdd) return null;
   const [mm, dd] = mmdd.split('-').map(Number);
@@ -126,7 +136,7 @@ export default function ContactDetail({
             ? `Last contacted by ${contact.lastContactedBy} on ${formatDate(contact.lastContactedAt)}. `
             : 'No interactions logged yet. '}
           {contact.nextReminderAt && (
-  <>Follow-up due {formatDate(contact.nextReminderAt)}.</>
+  <>Follow-up due {formatDateOnly(contact.nextReminderAt)}.</>
 )}
         </span>
       </div>
