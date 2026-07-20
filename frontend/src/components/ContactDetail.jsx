@@ -126,8 +126,8 @@ export default function ContactDetail({
             ? `Last contacted by ${contact.lastContactedBy} on ${formatDate(contact.lastContactedAt)}. `
             : 'No interactions logged yet. '}
           {contact.nextReminderAt && (
-            <>Next reminder goes to <strong>whoever logs the next touchpoint</strong> on {formatDate(contact.nextReminderAt)}.</>
-          )}
+  <>Follow-up due {formatDate(contact.nextReminderAt)}.</>
+)}
         </span>
       </div>
 
