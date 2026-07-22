@@ -8,6 +8,7 @@ const TYPE_LABELS = {
   call: 'Phone call',
   email: 'Email',
   coffee: 'Coffee / meal',
+  in_person: 'In Person',
   event: 'Event',
   message: 'Message',
   other: 'Other',

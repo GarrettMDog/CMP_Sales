@@ -18,6 +18,7 @@ const TYPE_LABELS = {
   call: 'Phone call',
   email: 'Email',
   coffee: 'Coffee / meal',
+  in_person: 'In Person',
   event: 'Event',
   message: 'Message',
   other: 'Other',
@@ -42,7 +43,7 @@ function formatDate(iso) {
   return `${mm}/${dd}/${yy} ${hh}:${min} ${ampm}`;
 }
 
-// Same as formatDate, but without the time — used just for the reminder due-date line.
+// Date-only version, used just for the reminder due-date line.
 function formatDateOnly(iso) {
   if (!iso) return null;
   const d = new Date(iso);
@@ -67,6 +68,7 @@ export default function ContactDetail({
   const [submitting, setSubmitting] = useState(false);
 
   const [editingInteractionId, setEditingInteractionId] = useState(null);
+  const [editingType, setEditingType] = useState('call');
   const [editingNote, setEditingNote] = useState('');
 
   if (!contact) {
@@ -136,8 +138,8 @@ export default function ContactDetail({
             ? `Last contacted by ${contact.lastContactedBy} on ${formatDate(contact.lastContactedAt)}. `
             : 'No interactions logged yet. '}
           {contact.nextReminderAt && (
-  <>Follow-up due {formatDateOnly(contact.nextReminderAt)}.</>
-)}
+            <>Follow-up due {formatDateOnly(contact.nextReminderAt)}.</>
+          )}
         </span>
       </div>
 
@@ -176,7 +178,9 @@ export default function ContactDetail({
             <div className="timeline-item__body">
               <div className="timeline-item__top">
                 <strong>{i.authorName}</strong>
-                <span className="timeline-item__type">{TYPE_LABELS[i.type] || i.type}</span>
+                {editingInteractionId !== i.id && (
+                  <span className="timeline-item__type">{TYPE_LABELS[i.type] || i.type}</span>
+                )}
                 <span className="timeline-item__date">{formatDate(i.occurredAt)}</span>
                 {i.editedAt && <span className="timeline-item__edited">(edited)</span>}
                 {editingInteractionId !== i.id && (
@@ -184,7 +188,11 @@ export default function ContactDetail({
                     size="small"
                     appearance="subtle"
                     icon={<Edit24Regular />}
-                    onClick={() => { setEditingInteractionId(i.id); setEditingNote(i.note || ''); }}
+                    onClick={() => {
+                      setEditingInteractionId(i.id);
+                      setEditingType(i.type);
+                      setEditingNote(i.note || '');
+                    }}
                   >
                     Edit
                   </Button>
@@ -193,6 +201,14 @@ export default function ContactDetail({
 
               {editingInteractionId === i.id ? (
                 <div className="timeline-item__edit">
+                  <Dropdown
+                    value={TYPE_LABELS[editingType] || editingType}
+                    onOptionSelect={(_, d) => setEditingType(d.optionValue)}
+                  >
+                    {Object.entries(TYPE_LABELS).map(([value, label]) => (
+                      <Option key={value} value={value}>{label}</Option>
+                    ))}
+                  </Dropdown>
                   <Textarea
                     value={editingNote}
                     onChange={(_, d) => setEditingNote(d.value)}
@@ -209,7 +225,7 @@ export default function ContactDetail({
                       size="small"
                       appearance="primary"
                       onClick={async () => {
-                        await onEditInteraction(i.id, { note: editingNote });
+                        await onEditInteraction(i.id, { type: editingType, note: editingNote });
                         setEditingInteractionId(null);
                       }}
                     >

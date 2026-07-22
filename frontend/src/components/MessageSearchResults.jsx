@@ -4,6 +4,7 @@ const TYPE_LABELS = {
   call: 'Phone call',
   email: 'Email',
   coffee: 'Coffee / meal',
+  in_person: 'In Person',
   event: 'Event',
   message: 'Message',
   other: 'Other',
@@ -27,8 +28,6 @@ function formatDate(iso) {
   return `${mm}/${dd}/${yy} ${hh}:${min} ${ampm}`;
 }
 
-// Shows a short snippet of the note centered on the matched text, with the
-// match itself highlighted — so you see why it matched at a glance.
 function highlightMatch(note, query) {
   if (!note) return null;
   const idx = note.toLowerCase().indexOf(query.toLowerCase());
