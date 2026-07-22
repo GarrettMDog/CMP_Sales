@@ -60,6 +60,12 @@ function formatBirthday(mmdd) {
   return `${months[mm - 1]} ${dd}`;
 }
 
+// Strips anything that isn't a digit or a leading + , so phone numbers typed
+// with dashes/spaces/parens still produce a valid tel: link.
+function telHref(phone) {
+  return `tel:${phone.replace(/[^\d+]/g, '')}`;
+}
+
 export default function ContactDetail({
   contact, currentUser, onLogInteraction, onEditInteraction, onEdit, onDelete,
 }) {
@@ -119,8 +125,16 @@ export default function ContactDetail({
       </div>
 
       <div className="contact-detail__facts">
-        {contact.email && <div><Mail24Regular /> {contact.email}</div>}
-        {contact.phone && <div><Call24Regular /> {contact.phone}</div>}
+        {contact.email && (
+          <a className="contact-detail__fact-link" href={`mailto:${contact.email}`}>
+            <Mail24Regular /> {contact.email}
+          </a>
+        )}
+        {contact.phone && (
+          <a className="contact-detail__fact-link" href={telHref(contact.phone)}>
+            <Call24Regular /> {contact.phone}
+          </a>
+        )}
         {contact.birthday && <div><FoodCake24Regular /> {formatBirthday(contact.birthday)}</div>}
         <div>
           <Clock24Regular /> Check in every {contact.recurrenceDays} days

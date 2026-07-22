@@ -398,6 +398,19 @@ body {
   color: var(--colorNeutralForeground2);
 }
 
+.contact-detail__fact-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--colorNeutralForeground2);
+  text-decoration: none;
+}
+ 
+.contact-detail__fact-link:hover {
+  color: var(--colorBrandForeground1);
+  text-decoration: underline;
+}
+
 .contact-detail__context {
   font-size: 13px;
   color: var(--colorNeutralForeground2);
