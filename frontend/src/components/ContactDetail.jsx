@@ -4,7 +4,7 @@ import {
 } from '@fluentui/react-components';
 import {
   Call24Regular, Mail24Regular, FoodCake24Regular, Edit24Regular, Delete24Regular,
-  Clock24Regular, PersonAdd24Regular,
+  Clock24Regular, PersonAdd24Regular, LockClosed24Regular,
 } from '@fluentui/react-icons';
 
 const TEMP_COLORS = {
@@ -183,7 +183,17 @@ export default function ContactDetail({
 
       <div className="interaction-timeline">
         <h3>History</h3>
-        {(!contact.interactions || contact.interactions.length === 0) && (
+        {(contact.hiddenPrivateCount > 0) && (
+          <div className="interaction-timeline__private-note">
+            <LockClosed24Regular />
+            <span>
+              {contact.hiddenPrivateCount} private {contact.hiddenPrivateCount === 1 ? 'email' : 'emails'}
+              {' '}— visible only to the sender and executives.
+            </span>
+          </div>
+        )}
+        {(!contact.interactions || contact.interactions.length === 0)
+          && !(contact.hiddenPrivateCount > 0) && (
           <p className="contact-detail__empty-history">No touchpoints logged yet.</p>
         )}
         {contact.interactions && contact.interactions.map((i) => (

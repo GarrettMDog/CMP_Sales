@@ -430,6 +430,27 @@ body {
   margin: 12px 0;
 }
 
+/* Subtle note shown when a contact has private emails the current viewer
+   can't see (owned by another rep). Muted, not alarming — it just explains
+   the gap so a shorter timeline doesn't read as a bug, especially on mobile. */
+.interaction-timeline__private-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--colorNeutralForeground3);
+  background: var(--colorNeutralBackground3);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+}
+
+.interaction-timeline__private-note svg {
+  flex-shrink: 0;
+  font-size: 16px;
+  margin-top: 1px;
+}
+
 /* Add these rules to frontend/src/styles.css — anywhere in the file, e.g.
    right after the existing .contact-detail rules is a natural spot. */
 

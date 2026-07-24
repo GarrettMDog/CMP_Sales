@@ -59,4 +59,15 @@ if (!hasEditedAt) {
   db.exec('ALTER TABLE interactions ADD COLUMN editedAt TEXT');
 }
 
+// Safe migration: add a "visibility" column to interactions. Everything logged
+// today is fully shared, so existing rows default to 'shared'. The only value
+// that narrows access is 'private', currently used exclusively for emails
+// ingested via the inbound-email endpoint — those are visible only to their
+// author and to executives. See permissions.js and the read filters in
+// server.js (canViewInteraction).
+const hasVisibility = interactionColumns.some((col) => col.name === 'visibility');
+if (!hasVisibility) {
+  db.exec("ALTER TABLE interactions ADD COLUMN visibility TEXT DEFAULT 'shared'");
+}
+
 module.exports = db;

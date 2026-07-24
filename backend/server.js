@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const db = require('./db');
 const { fireReminderForContact } = require('./notifications');
 const { verifyTeamsToken } = require('./auth');
+const { isExecutive } = require('./permissions');
+const graph = require('./graph');
 
 const app = express();
 
@@ -12,6 +14,16 @@ app.use(cors({ origin: 'https://cmp-sales.vercel.app' }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
+
+// --- Inbound-email config (all via environment variables) ------------------
+// Mail is PULLED from a shared Microsoft 365 mailbox via Graph (see graph.js),
+// not pushed by a webhook — so there's no public endpoint or shared secret.
+// COMPANY_DOMAIN — your email domain (e.g. cmpconcrete.com). Addresses here are
+//                  treated as internal reps, never as contacts to match.
+// LOG_MAILBOX    — the shared mailbox reps CC/BCC/forward to (e.g.
+//                  crm-log@cmpconcrete.com), so it's never mistaken for a contact.
+const COMPANY_DOMAIN = (process.env.COMPANY_DOMAIN || '').toLowerCase();
+const LOG_MAILBOX = (process.env.LOG_MAILBOX || '').toLowerCase();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,6 +36,43 @@ function addDays(isoDate, days) {
 
 function serializeContact(row) {
   return row;
+}
+
+// ---------------------------------------------------------------------------
+// Visibility: a 'private' interaction (currently only inbound emails) is
+// visible ONLY to its author and to executives. Everything else is shared,
+// exactly as before. This is the single gate every read path calls, so the
+// rule lives in one place.
+// ---------------------------------------------------------------------------
+function canViewInteraction(interaction, viewer) {
+  if (!interaction || interaction.visibility !== 'private') return true;
+  const viewerEmail = (viewer && viewer.email ? viewer.email : '').toLowerCase();
+  const authorEmail = (interaction.authorEmail || '').toLowerCase();
+  if (viewerEmail && authorEmail && viewerEmail === authorEmail) return true;
+  return isExecutive(viewerEmail);
+}
+
+// Strip HTML tags to plain text — Graph returns message bodies as HTML, and we
+// scan the plain text for addresses (forwarded-mail fallback) and store a clean
+// note.
+function stripHtml(html) {
+  return String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Pull any email addresses out of free text — used as a fallback for forwarded
+// mail, where the original sender is buried in the quoted body rather than the
+// headers.
+function extractEmailsFromText(text) {
+  if (!text) return [];
+  const matches = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+  return matches.map((e) => e.toLowerCase());
 }
 
 // ---------------------------------------------------------------------------
@@ -71,11 +120,17 @@ app.get('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
 
-  const interactions = db
+  const allInteractions = db
     .prepare('SELECT * FROM interactions WHERE contactId = ? ORDER BY occurredAt DESC')
     .all(req.params.id);
 
-  res.json({ ...contact, interactions });
+  // Hide private emails the viewer isn't allowed to see. We still report how
+  // many were hidden so the UI can show a subtle placeholder rather than an
+  // unexplained gap (matters most on mobile, where there's little context).
+  const interactions = allInteractions.filter((i) => canViewInteraction(i, req.teamsUser));
+  const hiddenPrivateCount = allInteractions.length - interactions.length;
+
+  res.json({ ...contact, interactions, hiddenPrivateCount });
 });
 
 // ---------------------------------------------------------------------------
@@ -179,11 +234,141 @@ app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// processInboundEmail — the ingestion-agnostic core. Takes a normalized email
+// (already-parsed addresses), matches the external party to a contact, and logs
+// it as a PRIVATE email interaction owned by the sending rep, resetting that
+// contact's follow-up clock exactly like a manual touchpoint. The Graph poller
+// (below) is the only caller today, but any future source can reuse this.
+//
+//   fromEmail / fromName : the rep who sent/forwarded it
+//   toEmails / ccEmails  : recipient addresses (arrays of strings)
+//   subject / text       : stored in the note (text = a clean body preview)
+//   bodyForMatching      : full plain-text body, scanned for a forwarded
+//                          sender's address when headers don't reveal one
+// Returns { status: 'logged'|'dropped', ... }.
+// ---------------------------------------------------------------------------
+function processInboundEmail({
+  fromEmail = '',
+  fromName = '',
+  toEmails = [],
+  ccEmails = [],
+  subject = '',
+  text = '',
+  bodyForMatching = '',
+}) {
+  const authorEmail = (fromEmail || '').toLowerCase() || null;
+  const authorName = fromName || authorEmail || 'Unknown sender';
+
+  // External = not our log mailbox and not an internal company address.
+  const isExternal = (e) =>
+    e && e !== LOG_MAILBOX && !(COMPANY_DOMAIN && e.endsWith('@' + COMPANY_DOMAIN));
+
+  let candidates = [...toEmails, ...ccEmails]
+    .map((e) => (e || '').toLowerCase())
+    .filter(isExternal);
+
+  // Forwarded-mail fallback: the original party is buried in the body.
+  if (candidates.length === 0) {
+    candidates = extractEmailsFromText(bodyForMatching || text).filter(
+      (e) => isExternal(e) && e !== authorEmail
+    );
+  }
+
+  // De-dupe addresses (the same person can appear in both To and Cc).
+  candidates = [...new Set(candidates)];
+
+  // Match EVERY candidate that is a known contact (case-insensitive). One email
+  // addressed to several contacts is logged onto each of their timelines.
+  const matched = [];
+  const seenContactIds = new Set();
+  for (const email of candidates) {
+    const c = db
+      .prepare('SELECT * FROM contacts WHERE email IS NOT NULL AND LOWER(email) = ?')
+      .get(email);
+    if (c && !seenContactIds.has(c.id)) {
+      seenContactIds.add(c.id);
+      matched.push(c);
+    }
+  }
+
+  // No match at all → drop (confirmed decision). Logged for diagnosis.
+  if (matched.length === 0) {
+    console.log('[inbound-email] dropped — no matching contact', { fromEmail, candidates });
+    return { status: 'dropped', reason: 'no matching contact' };
+  }
+
+  // Log the email onto each matched contact, resetting each one's follow-up
+  // clock (an emailed touchpoint counts for every contact on the thread).
+  const when = new Date().toISOString();
+  const note = [subject, text].map((s) => (s || '').trim()).filter(Boolean).join('\n\n');
+  const loggedContactIds = [];
+
+  for (const contact of matched) {
+    const id = crypto.randomUUID();
+    db.prepare(`
+      INSERT INTO interactions
+        (id, contactId, authorName, authorEmail, type, note, occurredAt, visibility)
+      VALUES (?, ?, ?, ?, 'email', ?, ?, 'private')
+    `).run(id, contact.id, authorName, authorEmail || null, note || null, when);
+
+    const nextReminderAt = addDays(when, contact.recurrenceDays || 90);
+    db.prepare(`
+      UPDATE contacts
+      SET lastContactedBy = ?, lastContactedByEmail = ?, lastContactedAt = ?, nextReminderAt = ?
+      WHERE id = ?
+    `).run(authorName, authorEmail || null, when, nextReminderAt, contact.id);
+
+    loggedContactIds.push(contact.id);
+  }
+
+  console.log('[inbound-email] logged', { contactIds: loggedContactIds, authorEmail });
+  return { status: 'logged', contactIds: loggedContactIds, count: loggedContactIds.length };
+}
+
+// ---------------------------------------------------------------------------
+// pollLogMailbox — reads unread mail from the shared M365 mailbox via Graph,
+// feeds each message through processInboundEmail, then marks it read so it's
+// not processed twice. Scheduled below. No-op until Graph env vars are set.
+// ---------------------------------------------------------------------------
+async function pollLogMailbox() {
+  if (!graph.isConfigured()) return;
+  let messages;
+  try {
+    messages = await graph.fetchUnreadMessages();
+  } catch (err) {
+    console.error('[inbound-email] Graph fetch failed:', err.message);
+    return;
+  }
+
+  for (const m of messages) {
+    try {
+      const fromEmail = m.from && m.from.emailAddress ? m.from.emailAddress.address : '';
+      const fromName = m.from && m.from.emailAddress ? m.from.emailAddress.name : '';
+      const toEmails = (m.toRecipients || []).map((r) => r.emailAddress && r.emailAddress.address).filter(Boolean);
+      const ccEmails = (m.ccRecipients || []).map((r) => r.emailAddress && r.emailAddress.address).filter(Boolean);
+      const text = m.bodyPreview || '';
+      const bodyForMatching = stripHtml(m.body && m.body.content) || text;
+      processInboundEmail({ fromEmail, fromName, toEmails, ccEmails, subject: m.subject || '', text, bodyForMatching });
+    } catch (err) {
+      console.error('[inbound-email] processing error for message', m.id, err.message);
+    } finally {
+      // Mark read regardless, so a poison message can't be reprocessed forever.
+      try {
+        await graph.markRead(m.id);
+      } catch (err) {
+        console.error('[inbound-email] markRead failed for', m.id, err.message);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // PUT /api/interactions/:id — edit a previously logged interaction's note/type.
 // ---------------------------------------------------------------------------
 app.put('/api/interactions/:id', verifyTeamsToken, (req, res) => {
   const interaction = db.prepare('SELECT * FROM interactions WHERE id = ?').get(req.params.id);
   if (!interaction) return res.status(404).json({ error: 'Interaction not found' });
+
 
   const { type, note } = req.body;
   const now = new Date().toISOString();
@@ -241,14 +426,22 @@ app.get('/api/activity/summary', verifyTeamsToken, (req, res) => {
     ORDER BY count DESC
   `).all(sinceIso);
 
-  const recent = db.prepare(`
-    SELECT i.id, i.authorName, i.type, i.note, i.occurredAt, c.name as contactName, c.id as contactId
+  const recentRaw = db.prepare(`
+    SELECT i.id, i.authorName, i.authorEmail, i.visibility, i.type, i.note,
+           i.occurredAt, c.name as contactName, c.id as contactId
     FROM interactions i
     JOIN contacts c ON c.id = i.contactId
     WHERE i.occurredAt >= ?
     ORDER BY i.occurredAt DESC
-    LIMIT 25
+    LIMIT 50
   `).all(sinceIso);
+
+  // Drop private emails the viewer can't see, then cap at 25. (Counts above
+  // are left global on purpose — a touchpoint tally isn't sensitive the way
+  // email *content* is. See note in the tracker / your call to revisit.)
+  const recent = recentRaw
+    .filter((i) => canViewInteraction(i, req.teamsUser))
+    .slice(0, 25);
 
   const totalTouchpoints = perRep.reduce((sum, r) => sum + r.touchpoints, 0);
 
@@ -312,7 +505,8 @@ app.get('/api/messages/search', verifyTeamsToken, (req, res) => {
   const like = `%${q.trim()}%`;
   const rows = db.prepare(`
     SELECT
-      i.id, i.contactId, i.authorName, i.type, i.note, i.occurredAt,
+      i.id, i.contactId, i.authorName, i.authorEmail, i.visibility,
+      i.type, i.note, i.occurredAt,
       c.name as contactName, c.company as contactCompany
     FROM interactions i
     JOIN contacts c ON c.id = i.contactId
@@ -321,7 +515,9 @@ app.get('/api/messages/search', verifyTeamsToken, (req, res) => {
     LIMIT 50
   `).all(like);
 
-  res.json(rows);
+  // Critical: without this, a rep could surface another rep's private email
+  // just by searching for text inside it.
+  res.json(rows.filter((r) => canViewInteraction(r, req.teamsUser)));
 });
 
 // ---------------------------------------------------------------------------
@@ -350,8 +546,21 @@ cron.schedule('0 8 * * *', () => {
   runReminderSweep().catch((err) => console.error('Reminder sweep failed:', err));
 });
 
+// Poll the shared log mailbox for CC'd/BCC'd/forwarded emails every minute.
+// No-op until the Graph env vars are set, so this is safe to ship dark.
+// (One shared mailbox at 1/min is trivial against Graph throttling limits.)
+cron.schedule('* * * * *', () => {
+  pollLogMailbox().catch((err) => console.error('Mailbox poll failed:', err));
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-app.listen(PORT, () => {
-  console.log(`Relationship CRM API listening on port ${PORT}`);
-});
+// Only start listening when run directly (node server.js) — not when imported
+// by a test, which lets tests call the functions below without opening a port.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Relationship CRM API listening on port ${PORT}`);
+  });
+}
+
+module.exports = { app, processInboundEmail, pollLogMailbox };
