@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Avatar, Badge, Button, Dropdown, Option, Textarea, Field, Divider,
+  Avatar, Badge, Button, Dropdown, Option, Textarea, Field, Divider, Combobox,
 } from '@fluentui/react-components';
 import {
   Call24Regular, Mail24Regular, FoodCake24Regular, Edit24Regular, Delete24Regular,
@@ -66,6 +66,15 @@ function telHref(phone) {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
 }
 
+// Starts-with match on either the project's name OR customer, so typing a GC
+// name surfaces that customer's projects.
+function projectMatches(p, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (p.name || '').toLowerCase().startsWith(q)
+    || (p.customer || '').toLowerCase().startsWith(q);
+}
+
 export default function ContactDetail({
   contact, currentUser, onLogInteraction, onEditInteraction, onEdit, onDelete,
   allProjects, onLinkProject, onUnlinkProject, onOpenProject,
@@ -79,6 +88,7 @@ export default function ContactDetail({
   const [editingType, setEditingType] = useState('call');
   const [editingNote, setEditingNote] = useState('');
   const [editingProjectId, setEditingProjectId] = useState('');
+  const [projectQuery, setProjectQuery] = useState('');
 
   if (!contact) {
     return (
@@ -163,19 +173,27 @@ export default function ContactDetail({
       <div className="contact-detail__projects">
         <h3>Projects</h3>
         <div className="project-contact-add">
-          <Dropdown
+          <Combobox
             placeholder="Add this contact to a project…"
+            freeform
+            value={projectQuery}
             selectedOptions={[]}
-            value=""
-            onOptionSelect={(_, d) => { if (d.optionValue) onLinkProject(d.optionValue); }}
+            onChange={(e) => setProjectQuery(e.target.value)}
+            onOptionSelect={(_, d) => { if (d.optionValue) { onLinkProject(d.optionValue); setProjectQuery(''); } }}
           >
-            {availableProjects.length === 0 && <Option value="" disabled>No other projects to add</Option>}
-            {availableProjects.map((p) => (
-              <Option key={p.id} value={p.id}>
-                {p.name}{p.customer ? ` · ${p.customer}` : ''}
+            {availableProjects.filter((p) => projectMatches(p, projectQuery)).length === 0 && (
+              <Option value="" disabled>
+                {availableProjects.length === 0 ? 'No other projects to add' : 'No matches'}
               </Option>
-            ))}
-          </Dropdown>
+            )}
+            {availableProjects
+              .filter((p) => projectMatches(p, projectQuery))
+              .map((p) => (
+                <Option key={p.id} value={p.id}>
+                  {p.name}{p.customer ? ` · ${p.customer}` : ''}
+                </Option>
+              ))}
+          </Combobox>
         </div>
         {contactProjects.length === 0 ? (
           <p className="contact-detail__empty-history">Not on any projects yet.</p>

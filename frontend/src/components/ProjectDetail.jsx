@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Avatar, Badge, Button, Dropdown, Option,
+  Avatar, Badge, Button, Dropdown, Option, Combobox,
 } from '@fluentui/react-components';
 import {
   Edit24Regular, Delete24Regular, Dismiss24Regular,
@@ -14,6 +14,15 @@ const TYPE_LABELS = {
 
 function initials(name) {
   return (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+}
+
+// Starts-with match on either the contact's name OR company, so typing a GC
+// name (e.g. "Turner") surfaces everyone there.
+function contactMatches(c, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (c.name || '').toLowerCase().startsWith(q)
+    || (c.company || '').toLowerCase().startsWith(q);
 }
 
 function formatDate(iso) {
@@ -38,6 +47,7 @@ export default function ProjectDetail({
   project, allContacts, onEdit, onDelete, onLinkContact, onUnlinkContact, onOpenContact,
 }) {
   const [feedView, setFeedView] = useState('all'); // 'all' | 'tagged'
+  const [contactQuery, setContactQuery] = useState('');
 
   if (!project) {
     return (
@@ -82,19 +92,27 @@ export default function ProjectDetail({
       <div className="project-detail__contacts">
         <h3>Contacts on this project</h3>
         <div className="project-contact-add">
-          <Dropdown
+          <Combobox
             placeholder="Add a contact to this project…"
+            freeform
+            value={contactQuery}
             selectedOptions={[]}
-            value=""
-            onOptionSelect={(_, d) => { if (d.optionValue) onLinkContact(d.optionValue); }}
+            onChange={(e) => setContactQuery(e.target.value)}
+            onOptionSelect={(_, d) => { if (d.optionValue) { onLinkContact(d.optionValue); setContactQuery(''); } }}
           >
-            {available.length === 0 && <Option value="" disabled>All contacts already linked</Option>}
-            {available.map((c) => (
-              <Option key={c.id} value={c.id}>
-                {c.name}{c.company ? ` · ${c.company}` : ''}
+            {available.filter((c) => contactMatches(c, contactQuery)).length === 0 && (
+              <Option value="" disabled>
+                {available.length === 0 ? 'All contacts already linked' : 'No matches'}
               </Option>
-            ))}
-          </Dropdown>
+            )}
+            {available
+              .filter((c) => contactMatches(c, contactQuery))
+              .map((c) => (
+                <Option key={c.id} value={c.id}>
+                  {c.name}{c.company ? ` · ${c.company}` : ''}
+                </Option>
+              ))}
+          </Combobox>
         </div>
 
         {(project.contacts || []).length === 0 && (
