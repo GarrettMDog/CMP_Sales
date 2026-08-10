@@ -45,4 +45,21 @@ export const api = {
   // Tier 3 Search History — searches message content, not just contact fields.
   searchMessages: (query, token) =>
     request(`/api/messages/search?q=${encodeURIComponent(query)}`, {}, token),
+
+  // Projects
+  listProjects: (params = {}, token) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/projects${qs ? `?${qs}` : ''}`, {}, token);
+  },
+  getProject: (id, token) => request(`/api/projects/${id}`, {}, token),
+  createProject: (data, token) =>
+    request('/api/projects', { method: 'POST', body: JSON.stringify(data) }, token),
+  updateProject: (id, data, token) =>
+    request(`/api/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  deleteProject: (id, token) =>
+    request(`/api/projects/${id}`, { method: 'DELETE' }, token),
+  linkProjectContact: (projectId, contactId, token) =>
+    request(`/api/projects/${projectId}/contacts`, { method: 'POST', body: JSON.stringify({ contactId }) }, token),
+  unlinkProjectContact: (projectId, contactId, token) =>
+    request(`/api/projects/${projectId}/contacts/${contactId}`, { method: 'DELETE' }, token),
 };

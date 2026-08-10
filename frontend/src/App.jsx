@@ -11,6 +11,9 @@ import AddEditContactModal from './components/AddEditContactModal.jsx';
 import RemindersBanner from './components/RemindersBanner.jsx';
 import ActivityDashboard from './components/ActivityDashboard.jsx';
 import MessageSearchResults from './components/MessageSearchResults.jsx';
+import ProjectList from './components/ProjectList.jsx';
+import ProjectDetail from './components/ProjectDetail.jsx';
+import AddEditProjectModal from './components/AddEditProjectModal.jsx';
 import { useTeamsUser } from './useTeamsUser.js';
 import { api } from './api.js';
 import './styles.css';
@@ -42,6 +45,17 @@ export default function App() {
   const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Projects tab state
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [projectSearch, setProjectSearch] = useState('');
+  const [projectStatusFilter, setProjectStatusFilter] = useState('');
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [projectDeleteTarget, setProjectDeleteTarget] = useState(null);
+  const [allContacts, setAllContacts] = useState([]); // unfiltered, for the link picker
 
   // Follow Teams theme (light/dark/high-contrast) so the tab always matches.
   useEffect(() => {
@@ -108,6 +122,72 @@ export default function App() {
     api.getContact(selectedId, token).then(setSelectedContact).catch(() => setSelectedContact(null));
   }, [selectedId, contacts, token]);
 
+  // --- Projects data ---
+  const refreshProjects = useCallback(async () => {
+    if (!token) return;
+    try {
+      const params = {};
+      if (projectSearch) params.q = projectSearch;
+      if (projectStatusFilter) params.status = projectStatusFilter;
+      const list = await api.listProjects(params, token);
+      setProjects(list);
+    } catch {
+      setProjects([]);
+    }
+  }, [projectSearch, projectStatusFilter, token]);
+
+  useEffect(() => { refreshProjects(); }, [refreshProjects]);
+
+  // Unfiltered contact list for the "add contact to project" picker.
+  useEffect(() => {
+    if (!token) return;
+    api.listContacts({}, token).then(setAllContacts).catch(() => setAllContacts([]));
+  }, [token, contacts]);
+
+  useEffect(() => {
+    if (!selectedProjectId || !token) { setSelectedProject(null); return; }
+    api.getProject(selectedProjectId, token).then(setSelectedProject).catch(() => setSelectedProject(null));
+  }, [selectedProjectId, token]);
+
+  async function reloadProject() {
+    if (!selectedProjectId) return;
+    const updated = await api.getProject(selectedProjectId, token);
+    setSelectedProject(updated);
+  }
+
+  async function handleSaveProject(data) {
+    if (editingProject) {
+      await api.updateProject(editingProject.id, data, token);
+      if (selectedProjectId === editingProject.id) reloadProject();
+    } else {
+      const created = await api.createProject(data, token);
+      setSelectedProjectId(created.id);
+    }
+    setProjectModalOpen(false);
+    setEditingProject(null);
+    refreshProjects();
+  }
+
+  async function confirmDeleteProject() {
+    const id = projectDeleteTarget;
+    setProjectDeleteTarget(null);
+    await api.deleteProject(id, token);
+    if (selectedProjectId === id) { setSelectedProjectId(null); setSelectedProject(null); }
+    refreshProjects();
+  }
+
+  async function handleLinkContact(contactId) {
+    await api.linkProjectContact(selectedProjectId, contactId, token);
+    reloadProject();
+    refreshProjects();
+  }
+
+  async function handleUnlinkContact(contactId) {
+    await api.unlinkProjectContact(selectedProjectId, contactId, token);
+    reloadProject();
+    refreshProjects();
+  }
+
   async function handleSaveContact(data) {
     if (editingContact) {
       await api.updateContact(editingContact.id, data, token);
@@ -168,6 +248,7 @@ export default function App() {
         <div className="app-tabs">
           <TabList selectedValue={activeView} onTabSelect={(_, d) => setActiveView(d.value)}>
             <Tab value="contacts">Contacts</Tab>
+            <Tab value="projects">Projects</Tab>
             <Tab value="activity">Activity</Tab>
           </TabList>
         </div>
@@ -222,6 +303,30 @@ export default function App() {
           </>
         )}
 
+        {activeView === 'projects' && (
+          <div className="app-body">
+            <ProjectList
+              projects={projects}
+              selectedId={selectedProjectId}
+              onSelect={setSelectedProjectId}
+              onAdd={() => { setEditingProject(null); setProjectModalOpen(true); }}
+              search={projectSearch}
+              onSearchChange={setProjectSearch}
+              statusFilter={projectStatusFilter}
+              onStatusFilterChange={setProjectStatusFilter}
+            />
+            <ProjectDetail
+              project={selectedProject}
+              allContacts={allContacts}
+              onEdit={(p) => { setEditingProject(p); setProjectModalOpen(true); }}
+              onDelete={(p) => setProjectDeleteTarget(p.id)}
+              onLinkContact={handleLinkContact}
+              onUnlinkContact={handleUnlinkContact}
+              onOpenContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
+            />
+          </div>
+        )}
+
         {activeView === 'activity' && (
           <ActivityDashboard
             onSelectContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
@@ -235,6 +340,29 @@ export default function App() {
           onClose={() => { setModalOpen(false); setEditingContact(null); }}
           onSave={handleSaveContact}
         />
+
+        <AddEditProjectModal
+          open={projectModalOpen}
+          initial={editingProject}
+          onClose={() => { setProjectModalOpen(false); setEditingProject(null); }}
+          onSave={handleSaveProject}
+        />
+
+        <Dialog open={!!projectDeleteTarget} onOpenChange={(_, data) => { if (!data.open) setProjectDeleteTarget(null); }}>
+          <DialogSurface>
+            <DialogBody>
+              <DialogTitle>Remove this project?</DialogTitle>
+              <DialogContent>
+                The project and its contact links are removed. Touchpoints stay on their contacts;
+                any tags to this project are cleared. This cannot be undone.
+              </DialogContent>
+              <DialogActions>
+                <Button appearance="secondary" onClick={() => setProjectDeleteTarget(null)}>Cancel</Button>
+                <Button appearance="primary" onClick={confirmDeleteProject}>Delete</Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
 
         <Dialog open={!!deleteTargetId} onOpenChange={(_, data) => { if (!data.open) setDeleteTargetId(null); }}>
           <DialogSurface>

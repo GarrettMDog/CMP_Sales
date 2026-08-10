@@ -636,3 +636,98 @@ body {
     padding: 16px;
   }
 }
+
+/* ---- Projects ---- */
+.contact-detail__actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.project-detail__notes {
+  font-size: 14px;
+  color: var(--colorNeutralForeground2);
+  margin: 4px 0 16px;
+}
+
+.project-detail__contacts {
+  margin-bottom: 20px;
+}
+
+.project-detail__contacts h3,
+.interaction-timeline h3 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+.project-contact-add {
+  margin-bottom: 12px;
+}
+
+.project-contact-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.project-contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--colorNeutralBackground3);
+  border-radius: 999px;
+  padding: 2px 6px 2px 4px;
+}
+
+.project-contact-chip__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--colorNeutralForeground1);
+  padding: 2px 4px;
+}
+
+.project-contact-chip__name:hover { text-decoration: underline; }
+
+.project-contact-chip__remove {
+  display: inline-flex;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--colorNeutralForeground3);
+  padding: 2px;
+  border-radius: 50%;
+}
+
+.project-contact-chip__remove:hover { background: var(--colorNeutralBackground4); }
+.project-contact-chip__remove svg { font-size: 14px; }
+
+.project-feed__toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.project-feed__contact {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--colorBrandForeground1);
+  padding: 0;
+}
+.project-feed__contact:hover { text-decoration: underline; }
+
+.project-feed__tag {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--colorBrandBackground2);
+  color: var(--colorBrandForeground2);
+}
