@@ -34,6 +34,20 @@ function addDays(isoDate, days) {
   return d.toISOString();
 }
 
+// Decide which project a new touchpoint should be tagged to.
+//  - If the caller passed an explicit projectId, use it (rep's choice wins).
+//  - Otherwise auto-tag ONLY when the contact is linked to exactly one project
+//    (unambiguous). 0 or 2+ linked projects → leave untagged (NULL).
+// This is what keeps tagging friction-free where it's obvious and human-decided
+// where it's ambiguous. Applies to both manual logs and auto-logged emails.
+function resolveProjectId(contactId, explicitProjectId) {
+  if (explicitProjectId) return explicitProjectId;
+  const links = db
+    .prepare('SELECT projectId FROM project_contacts WHERE contactId = ?')
+    .all(contactId);
+  return links.length === 1 ? links[0].projectId : null;
+}
+
 function serializeContact(row) {
   return row;
 }
@@ -130,7 +144,16 @@ app.get('/api/contacts/:id', verifyTeamsToken, (req, res) => {
   const interactions = allInteractions.filter((i) => canViewInteraction(i, req.teamsUser));
   const hiddenPrivateCount = allInteractions.length - interactions.length;
 
-  res.json({ ...contact, interactions, hiddenPrivateCount });
+  // Projects this contact is linked to — drives both-direction linking and the
+  // log-form project picker (0 = no picker, 1 = auto-tag, 2+ = pick).
+  const projects = db.prepare(`
+    SELECT p.* FROM projects p
+    JOIN project_contacts pc ON pc.projectId = p.id
+    WHERE pc.contactId = ?
+    ORDER BY p.name COLLATE NOCASE ASC
+  `).all(req.params.id);
+
+  res.json({ ...contact, interactions, hiddenPrivateCount, projects });
 });
 
 // ---------------------------------------------------------------------------
@@ -205,7 +228,7 @@ app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
   const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(req.params.id);
   if (!contact) return res.status(404).json({ error: 'Contact not found' });
 
-  const { type, note, occurredAt } = req.body;
+  const { type, note, occurredAt, projectId } = req.body;
   const authorName = req.teamsUser.name;
   const authorEmail = req.teamsUser.email;
 
@@ -215,11 +238,12 @@ app.post('/api/contacts/:id/interactions', verifyTeamsToken, (req, res) => {
 
   const id = crypto.randomUUID();
   const when = occurredAt || new Date().toISOString();
+  const taggedProjectId = resolveProjectId(req.params.id, projectId);
 
   db.prepare(`
-    INSERT INTO interactions (id, contactId, authorName, authorEmail, type, note, occurredAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, req.params.id, authorName, authorEmail || null, type, note || null, when);
+    INSERT INTO interactions (id, contactId, authorName, authorEmail, type, note, occurredAt, projectId)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, req.params.id, authorName, authorEmail || null, type, note || null, when, taggedProjectId);
 
   const nextReminderAt = addDays(when, contact.recurrenceDays || 90);
 
@@ -305,11 +329,13 @@ function processInboundEmail({
 
   for (const contact of matched) {
     const id = crypto.randomUUID();
+    // Auto-tag to the contact's project only when it's unambiguous (one project).
+    const taggedProjectId = resolveProjectId(contact.id, null);
     db.prepare(`
       INSERT INTO interactions
-        (id, contactId, authorName, authorEmail, type, note, occurredAt, visibility)
-      VALUES (?, ?, ?, ?, 'email', ?, ?, 'private')
-    `).run(id, contact.id, authorName, authorEmail || null, note || null, when);
+        (id, contactId, authorName, authorEmail, type, note, occurredAt, visibility, projectId)
+      VALUES (?, ?, ?, ?, 'email', ?, ?, 'private', ?)
+    `).run(id, contact.id, authorName, authorEmail || null, note || null, when, taggedProjectId);
 
     const nextReminderAt = addDays(when, contact.recurrenceDays || 90);
     db.prepare(`
@@ -370,22 +396,194 @@ app.put('/api/interactions/:id', verifyTeamsToken, (req, res) => {
   if (!interaction) return res.status(404).json({ error: 'Interaction not found' });
 
 
-  const { type, note } = req.body;
+  const { type, note, projectId } = req.body;
   const now = new Date().toISOString();
+
+  // projectId: if the key is present, set it (a value tags/re-tags; null clears
+  // the tag). If the key is absent entirely, leave the existing tag untouched.
+  const newProjectId = Object.prototype.hasOwnProperty.call(req.body, 'projectId')
+    ? (projectId || null)
+    : interaction.projectId;
 
   db.prepare(`
     UPDATE interactions
-    SET type = ?, note = ?, editedAt = ?
+    SET type = ?, note = ?, editedAt = ?, projectId = ?
     WHERE id = ?
   `).run(
     type || interaction.type,
     note !== undefined ? note : interaction.note,
     now,
+    newProjectId,
     req.params.id
   );
 
   const updated = db.prepare('SELECT * FROM interactions WHERE id = ?').get(req.params.id);
   res.json(updated);
+});
+
+// ===========================================================================
+// PROJECTS
+// ===========================================================================
+
+// GET /api/projects — list, with optional ?q= search and ?status= filter.
+// Includes a contactCount so the list can show it without an extra call.
+app.get('/api/projects', verifyTeamsToken, (req, res) => {
+  const { q, status } = req.query;
+  let sql = `
+    SELECT p.*, (
+      SELECT COUNT(*) FROM project_contacts pc WHERE pc.projectId = p.id
+    ) AS contactCount
+    FROM projects p WHERE 1=1`;
+  const params = [];
+  if (q && q.trim()) {
+    sql += ' AND (p.name LIKE ? OR p.customer LIKE ?)';
+    const like = `%${q.trim()}%`;
+    params.push(like, like);
+  }
+  if (status && status.trim()) {
+    sql += ' AND p.status = ?';
+    params.push(status.trim());
+  }
+  sql += ' ORDER BY p.createdAt DESC';
+  res.json(db.prepare(sql).all(...params));
+});
+
+// POST /api/projects — create.
+app.post('/api/projects', verifyTeamsToken, (req, res) => {
+  const { name, customer, status, value, bidDueDate, notes } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+
+  const id = crypto.randomUUID();
+  db.prepare(`
+    INSERT INTO projects (id, name, customer, status, value, bidDueDate, notes, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, name.trim(), customer || null, status || 'Bidding',
+    value != null && value !== '' ? Number(value) : null,
+    bidDueDate || null, notes || null, new Date().toISOString()
+  );
+  res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(id));
+});
+
+// GET /api/projects/:id — detail: project fields, linked contacts, and BOTH
+// feed views (so the frontend toggle is instant, no refetch):
+//   allConversations  — every interaction with any linked contact
+//   taggedConversations — only interactions tagged to this project
+// Both respect the same private-email visibility rule as everywhere else.
+app.get('/api/projects/:id', verifyTeamsToken, (req, res) => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const contacts = db.prepare(`
+    SELECT c.* FROM contacts c
+    JOIN project_contacts pc ON pc.contactId = c.id
+    WHERE pc.projectId = ?
+    ORDER BY c.name COLLATE NOCASE ASC
+  `).all(req.params.id);
+
+  // "All from linked contacts" — join through the link table. Includes contact
+  // name for display. Visibility-filtered below.
+  const allRaw = db.prepare(`
+    SELECT i.*, c.name AS contactName
+    FROM interactions i
+    JOIN contacts c ON c.id = i.contactId
+    JOIN project_contacts pc ON pc.contactId = i.contactId
+    WHERE pc.projectId = ?
+    ORDER BY i.occurredAt DESC
+    LIMIT 200
+  `).all(req.params.id);
+
+  // "Tagged to this project" — only interactions explicitly tagged.
+  const taggedRaw = db.prepare(`
+    SELECT i.*, c.name AS contactName
+    FROM interactions i
+    JOIN contacts c ON c.id = i.contactId
+    WHERE i.projectId = ?
+    ORDER BY i.occurredAt DESC
+    LIMIT 200
+  `).all(req.params.id);
+
+  const allConversations = allRaw.filter((i) => canViewInteraction(i, req.teamsUser));
+  const taggedConversations = taggedRaw.filter((i) => canViewInteraction(i, req.teamsUser));
+
+  res.json({ ...project, contacts, allConversations, taggedConversations });
+});
+
+// PUT /api/projects/:id — edit fields / status.
+app.put('/api/projects/:id', verifyTeamsToken, (req, res) => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const { name, customer, status, value, bidDueDate, notes } = req.body;
+  db.prepare(`
+    UPDATE projects
+    SET name = ?, customer = ?, status = ?, value = ?, bidDueDate = ?, notes = ?
+    WHERE id = ?
+  `).run(
+    name != null ? name.trim() : project.name,
+    customer !== undefined ? (customer || null) : project.customer,
+    status || project.status,
+    value !== undefined ? (value != null && value !== '' ? Number(value) : null) : project.value,
+    bidDueDate !== undefined ? (bidDueDate || null) : project.bidDueDate,
+    notes !== undefined ? (notes || null) : project.notes,
+    req.params.id
+  );
+  res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id));
+});
+
+// DELETE /api/projects/:id — removes the project and its contact links.
+// Interaction tags to this project are cleared (projectId -> NULL) so no
+// touchpoint is left pointing at a project that no longer exists. The
+// touchpoints themselves are kept. (Open, with UI confirmation, matching the
+// contact-delete pattern; can be admin-gated later.)
+app.delete('/api/projects/:id', verifyTeamsToken, (req, res) => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  db.prepare('UPDATE interactions SET projectId = NULL WHERE projectId = ?').run(req.params.id);
+  db.prepare('DELETE FROM project_contacts WHERE projectId = ?').run(req.params.id);
+  db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
+  res.json({ status: 'deleted', id: req.params.id });
+});
+
+// POST /api/projects/:id/contacts — link a contact { contactId }.
+app.post('/api/projects/:id/contacts', verifyTeamsToken, (req, res) => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const { contactId } = req.body;
+  const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(contactId);
+  if (!contact) return res.status(404).json({ error: 'Contact not found' });
+
+  // INSERT OR IGNORE makes linking idempotent (composite PK prevents dupes).
+  db.prepare(`
+    INSERT OR IGNORE INTO project_contacts (projectId, contactId, linkedAt)
+    VALUES (?, ?, ?)
+  `).run(req.params.id, contactId, new Date().toISOString());
+
+  const contacts = db.prepare(`
+    SELECT c.* FROM contacts c
+    JOIN project_contacts pc ON pc.contactId = c.id
+    WHERE pc.projectId = ?
+    ORDER BY c.name COLLATE NOCASE ASC
+  `).all(req.params.id);
+  res.json(contacts);
+});
+
+// DELETE /api/projects/:id/contacts/:contactId — unlink a contact.
+// Note: does NOT retag/untag that contact's existing touchpoints; tags are a
+// separate, deliberate choice and are left as-is.
+app.delete('/api/projects/:id/contacts/:contactId', verifyTeamsToken, (req, res) => {
+  db.prepare('DELETE FROM project_contacts WHERE projectId = ? AND contactId = ?')
+    .run(req.params.id, req.params.contactId);
+
+  const contacts = db.prepare(`
+    SELECT c.* FROM contacts c
+    JOIN project_contacts pc ON pc.contactId = c.id
+    WHERE pc.projectId = ?
+    ORDER BY c.name COLLATE NOCASE ASC
+  `).all(req.params.id);
+  res.json(contacts);
 });
 
 // ---------------------------------------------------------------------------
@@ -563,4 +761,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, processInboundEmail, pollLogMailbox };
+module.exports = { app, processInboundEmail, pollLogMailbox, resolveProjectId };

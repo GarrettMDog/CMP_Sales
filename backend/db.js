@@ -48,6 +48,28 @@ CREATE TABLE IF NOT EXISTS reminder_log (
   sentAt TEXT NOT NULL,
   FOREIGN KEY (contactId) REFERENCES contacts(id)
 );
+
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  customer TEXT,              -- the GC / developer this project is for
+  status TEXT DEFAULT 'Bidding', -- Bidding | Submitted | Won | Lost | Complete
+  value REAL,                 -- dollar value (nullable)
+  bidDueDate TEXT,            -- ISO date (nullable)
+  notes TEXT,
+  createdAt TEXT NOT NULL
+);
+
+-- Many-to-many link between projects and contacts. A contact can be on many
+-- projects; a project has many contacts.
+CREATE TABLE IF NOT EXISTS project_contacts (
+  projectId TEXT NOT NULL,
+  contactId TEXT NOT NULL,
+  linkedAt TEXT NOT NULL,
+  PRIMARY KEY (projectId, contactId),
+  FOREIGN KEY (projectId) REFERENCES projects(id),
+  FOREIGN KEY (contactId) REFERENCES contacts(id)
+);
 `);
 
 // Safe migration: add an "editedAt" column to interactions if it doesn't
@@ -68,6 +90,15 @@ if (!hasEditedAt) {
 const hasVisibility = interactionColumns.some((col) => col.name === 'visibility');
 if (!hasVisibility) {
   db.exec("ALTER TABLE interactions ADD COLUMN visibility TEXT DEFAULT 'shared'");
+}
+
+// Safe migration: add a "projectId" column to interactions — the optional tag
+// linking a touchpoint to a specific project. NULL = untagged. Set explicitly
+// when a rep picks a project, or auto-set when the contact is linked to exactly
+// one project. Drives the "Tagged to this project" feed view.
+const hasProjectId = interactionColumns.some((col) => col.name === 'projectId');
+if (!hasProjectId) {
+  db.exec('ALTER TABLE interactions ADD COLUMN projectId TEXT');
 }
 
 module.exports = db;
