@@ -731,3 +731,17 @@ body {
   background: var(--colorBrandBackground2);
   color: var(--colorBrandForeground2);
 }
+
+/* ---- Projects on the contact detail (Stage 3) ---- */
+.contact-detail__projects {
+  margin: 16px 0;
+}
+.contact-detail__projects h3 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.log-interaction__project-hint {
+  font-size: 12px;
+  color: var(--colorBrandForeground1);
+  margin: 4px 0 0;
+}

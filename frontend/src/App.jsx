@@ -144,6 +144,13 @@ export default function App() {
     api.listContacts({}, token).then(setAllContacts).catch(() => setAllContacts([]));
   }, [token, contacts]);
 
+  // Unfiltered projects list for the contact-side "add to project" picker.
+  const [allProjects, setAllProjects] = useState([]);
+  useEffect(() => {
+    if (!token) return;
+    api.listProjects({}, token).then(setAllProjects).catch(() => setAllProjects([]));
+  }, [token, projects]);
+
   useEffect(() => {
     if (!selectedProjectId || !token) { setSelectedProject(null); return; }
     api.getProject(selectedProjectId, token).then(setSelectedProject).catch(() => setSelectedProject(null));
@@ -185,6 +192,23 @@ export default function App() {
   async function handleUnlinkContact(contactId) {
     await api.unlinkProjectContact(selectedProjectId, contactId, token);
     reloadProject();
+    refreshProjects();
+  }
+
+  // Contact-side linking (both-direction): link/unlink the currently open
+  // contact to/from a project, then reload the contact so its projects list
+  // (and the log-form picker) updates.
+  async function handleLinkContactToProject(projectId) {
+    await api.linkProjectContact(projectId, selectedId, token);
+    const updated = await api.getContact(selectedId, token);
+    setSelectedContact(updated);
+    refreshProjects();
+  }
+
+  async function handleUnlinkContactFromProject(projectId) {
+    await api.unlinkProjectContact(projectId, selectedId, token);
+    const updated = await api.getContact(selectedId, token);
+    setSelectedContact(updated);
     refreshProjects();
   }
 
@@ -297,6 +321,10 @@ export default function App() {
                   onEditInteraction={handleEditInteraction}
                   onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
                   onDelete={handleDelete}
+                  allProjects={allProjects}
+                  onLinkProject={handleLinkContactToProject}
+                  onUnlinkProject={handleUnlinkContactFromProject}
+                  onOpenProject={(projectId) => { setSelectedProjectId(projectId); setActiveView('projects'); }}
                 />
               )}
             </div>

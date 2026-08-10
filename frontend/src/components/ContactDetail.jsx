@@ -68,14 +68,17 @@ function telHref(phone) {
 
 export default function ContactDetail({
   contact, currentUser, onLogInteraction, onEditInteraction, onEdit, onDelete,
+  allProjects, onLinkProject, onUnlinkProject, onOpenProject,
 }) {
   const [type, setType] = useState('call');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [logProjectId, setLogProjectId] = useState(''); // '' = None (only used when 2+ projects)
 
   const [editingInteractionId, setEditingInteractionId] = useState(null);
   const [editingType, setEditingType] = useState('call');
   const [editingNote, setEditingNote] = useState('');
+  const [editingProjectId, setEditingProjectId] = useState('');
 
   if (!contact) {
     return (
@@ -85,18 +88,30 @@ export default function ContactDetail({
     );
   }
 
+  const contactProjects = contact.projects || [];
+  const projectName = (id) => (contactProjects.find((p) => p.id === id) || {}).name;
+  const linkedProjectIds = new Set(contactProjects.map((p) => p.id));
+  const availableProjects = (allProjects || []).filter((p) => !linkedProjectIds.has(p.id));
+
   const overdue = contact.nextReminderAt && new Date(contact.nextReminderAt) <= new Date();
 
   async function handleLog() {
     setSubmitting(true);
     try {
-      await onLogInteraction(contact.id, {
+      const data = {
         authorName: currentUser.name,
         authorEmail: currentUser.email,
         type,
         note,
-      });
+      };
+      // 0 projects → omit (nothing to tag). 1 → omit, backend auto-tags to the
+      // single project. 2+ → send the rep's explicit choice ('' = None → null).
+      if (contactProjects.length >= 2) {
+        data.projectId = logProjectId || null;
+      }
+      await onLogInteraction(contact.id, data);
       setNote('');
+      setLogProjectId('');
     } finally {
       setSubmitting(false);
     }
@@ -145,6 +160,46 @@ export default function ContactDetail({
         <p className="contact-detail__context">{contact.howYouKnowThem}</p>
       )}
 
+      <div className="contact-detail__projects">
+        <h3>Projects</h3>
+        <div className="project-contact-add">
+          <Dropdown
+            placeholder="Add this contact to a project…"
+            selectedOptions={[]}
+            value=""
+            onOptionSelect={(_, d) => { if (d.optionValue) onLinkProject(d.optionValue); }}
+          >
+            {availableProjects.length === 0 && <Option value="" disabled>No other projects to add</Option>}
+            {availableProjects.map((p) => (
+              <Option key={p.id} value={p.id}>
+                {p.name}{p.customer ? ` · ${p.customer}` : ''}
+              </Option>
+            ))}
+          </Dropdown>
+        </div>
+        {contactProjects.length === 0 ? (
+          <p className="contact-detail__empty-history">Not on any projects yet.</p>
+        ) : (
+          <div className="project-contact-chips">
+            {contactProjects.map((p) => (
+              <span key={p.id} className="project-contact-chip">
+                <button type="button" className="project-contact-chip__name" onClick={() => onOpenProject && onOpenProject(p.id)}>
+                  {p.name}
+                </button>
+                <button
+                  type="button"
+                  className="project-contact-chip__remove"
+                  aria-label={`Remove from ${p.name}`}
+                  onClick={() => onUnlinkProject(p.id)}
+                >
+                  <Delete24Regular />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="contact-detail__reminder-info">
         <PersonAdd24Regular />
         <span>
@@ -169,6 +224,28 @@ export default function ContactDetail({
             </Dropdown>
           </div>
         </Field>
+
+        {contactProjects.length === 1 && (
+          <div className="log-interaction__project-hint">
+            <span>Tags to {contactProjects[0].name}</span>
+          </div>
+        )}
+        {contactProjects.length >= 2 && (
+          <Field label="Tag to project">
+            <Dropdown
+              placeholder="None"
+              value={logProjectId ? projectName(logProjectId) : 'None'}
+              selectedOptions={[logProjectId]}
+              onOptionSelect={(_, d) => setLogProjectId(d.optionValue)}
+            >
+              <Option value="">None</Option>
+              {contactProjects.map((p) => (
+                <Option key={p.id} value={p.id}>{p.name}</Option>
+              ))}
+            </Dropdown>
+          </Field>
+        )}
+
         <Textarea
           placeholder={`What did you and ${contact.name} talk about?`}
           value={note}
@@ -207,6 +284,9 @@ export default function ContactDetail({
                 )}
                 <span className="timeline-item__date">{formatDate(i.occurredAt)}</span>
                 {i.editedAt && <span className="timeline-item__edited">(edited)</span>}
+                {editingInteractionId !== i.id && i.projectId && (
+                  <span className="project-feed__tag">{projectName(i.projectId) || 'tagged'}</span>
+                )}
                 {editingInteractionId !== i.id && (
                   <Button
                     size="small"
@@ -216,6 +296,7 @@ export default function ContactDetail({
                       setEditingInteractionId(i.id);
                       setEditingType(i.type);
                       setEditingNote(i.note || '');
+                      setEditingProjectId(i.projectId || '');
                     }}
                   >
                     Edit
@@ -237,6 +318,19 @@ export default function ContactDetail({
                     value={editingNote}
                     onChange={(_, d) => setEditingNote(d.value)}
                   />
+                  {contactProjects.length >= 1 && (
+                    <Dropdown
+                      placeholder="None"
+                      value={editingProjectId ? projectName(editingProjectId) : 'None'}
+                      selectedOptions={[editingProjectId]}
+                      onOptionSelect={(_, d) => setEditingProjectId(d.optionValue)}
+                    >
+                      <Option value="">None</Option>
+                      {contactProjects.map((p) => (
+                        <Option key={p.id} value={p.id}>{p.name}</Option>
+                      ))}
+                    </Dropdown>
+                  )}
                   <div className="timeline-item__edit-actions">
                     <Button
                       size="small"
@@ -249,7 +343,11 @@ export default function ContactDetail({
                       size="small"
                       appearance="primary"
                       onClick={async () => {
-                        await onEditInteraction(i.id, { type: editingType, note: editingNote });
+                        const payload = { type: editingType, note: editingNote };
+                        // Only send projectId when the contact has projects, so
+                        // we never clobber a tag on a 0-project contact.
+                        if (contactProjects.length >= 1) payload.projectId = editingProjectId || null;
+                        await onEditInteraction(i.id, payload);
                         setEditingInteractionId(null);
                       }}
                     >
