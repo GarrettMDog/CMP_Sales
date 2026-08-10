@@ -256,6 +256,22 @@ export default function App() {
     setSelectedId(contactId);
   }
 
+  // Typing in the search box reverts the panel to message results (clears any
+  // contact card that was open). Clicking a contact in the list then re-shows
+  // that contact's card — see the panel logic below.
+  function handleSearchChange(value) {
+    setSearch(value);
+    setSelectedId(null);
+  }
+
+  // Clicking a contact while a search is active shows their card instead of
+  // staying stuck on message results (the previous behavior made list names
+  // feel un-clickable). Message results show while searching UNTIL a contact
+  // is selected.
+  function handleSelectContact(contactId) {
+    setSelectedId(contactId);
+  }
+
   if (userLoading) {
     return (
       <FluentProvider theme={theme}>
@@ -264,7 +280,7 @@ export default function App() {
     );
   }
 
-  const showMessageSearch = search.trim().length > 0;
+  const showMessageSearch = search.trim().length > 0 && !selectedId;
 
   return (
     <FluentProvider theme={theme}>
@@ -295,10 +311,10 @@ export default function App() {
               <ContactList
                 contacts={contacts}
                 selectedId={selectedId}
-                onSelect={setSelectedId}
+                onSelect={handleSelectContact}
                 onAdd={() => { setEditingContact(null); setModalOpen(true); }}
                 search={search}
-                onSearchChange={setSearch}
+                onSearchChange={handleSearchChange}
                 temperatureFilter={temperatureFilter}
                 onTemperatureFilterChange={setTemperatureFilter}
                 reps={reps}
