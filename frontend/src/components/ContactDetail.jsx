@@ -76,7 +76,7 @@ function projectMatches(p, query) {
 }
 
 export default function ContactDetail({
-  contact, currentUser, onLogInteraction, onEditInteraction, onEdit, onDelete,
+  contact, currentUser, onLogInteraction, onEditInteraction, onDeleteInteraction, onEdit, onDelete,
   allProjects, onLinkProject, onUnlinkProject, onOpenProject,
 }) {
   const [type, setType] = useState('call');
@@ -89,6 +89,7 @@ export default function ContactDetail({
   const [editingNote, setEditingNote] = useState('');
   const [editingProjectId, setEditingProjectId] = useState('');
   const [projectQuery, setProjectQuery] = useState('');
+  const [deletingInteractionId, setDeletingInteractionId] = useState(null);
 
   if (!contact) {
     return (
@@ -308,20 +309,55 @@ export default function ContactDetail({
                 {editingInteractionId !== i.id && i.projectId && (
                   <span className="project-feed__tag">{projectName(i.projectId) || 'tagged'}</span>
                 )}
-                {editingInteractionId !== i.id && (
-                  <Button
-                    size="small"
-                    appearance="subtle"
-                    icon={<Edit24Regular />}
-                    onClick={() => {
-                      setEditingInteractionId(i.id);
-                      setEditingType(i.type);
-                      setEditingNote(i.note || '');
-                      setEditingProjectId(i.projectId || '');
-                    }}
-                  >
-                    Edit
-                  </Button>
+                {editingInteractionId !== i.id && deletingInteractionId !== i.id && (
+                  <>
+                    <Button
+                      size="small"
+                      appearance="subtle"
+                      icon={<Edit24Regular />}
+                      onClick={() => {
+                        setEditingInteractionId(i.id);
+                        setEditingType(i.type);
+                        setEditingNote(i.note || '');
+                        setEditingProjectId(i.projectId || '');
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    {currentUser?.isAdmin && (
+                      <Button
+                        size="small"
+                        appearance="subtle"
+                        icon={<Delete24Regular />}
+                        onClick={() => setDeletingInteractionId(i.id)}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                  </>
+                )}
+                {deletingInteractionId === i.id && (
+                  <span className="timeline-item__delete-confirm">
+                    <span className="timeline-item__delete-prompt">Delete this touchpoint?</span>
+                    <Button
+                      size="small"
+                      appearance="primary"
+                      className="timeline-item__delete-yes"
+                      onClick={async () => {
+                        await onDeleteInteraction(i.id);
+                        setDeletingInteractionId(null);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      size="small"
+                      appearance="secondary"
+                      onClick={() => setDeletingInteractionId(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </span>
                 )}
               </div>
 

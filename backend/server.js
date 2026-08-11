@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const db = require('./db');
 const { fireReminderForContact } = require('./notifications');
 const { verifyTeamsToken } = require('./auth');
-const { isExecutive } = require('./permissions');
+const { isExecutive, isAdmin } = require('./permissions');
 const graph = require('./graph');
 
 const app = express();
@@ -93,7 +93,11 @@ function extractEmailsFromText(text) {
 // GET /api/me
 // ---------------------------------------------------------------------------
 app.get('/api/me', verifyTeamsToken, (req, res) => {
-  res.json(req.teamsUser);
+  res.json({
+    ...req.teamsUser,
+    isAdmin: isAdmin(req.teamsUser.email),
+    isExecutive: isExecutive(req.teamsUser.email),
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -420,6 +424,50 @@ app.put('/api/interactions/:id', verifyTeamsToken, (req, res) => {
 
   const updated = db.prepare('SELECT * FROM interactions WHERE id = ?').get(req.params.id);
   res.json(updated);
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/interactions/:id — ADMIN ONLY. Removes a touchpoint, then
+// recalculates the parent contact's cached last-contacted / reminder fields
+// from whatever interaction is now most recent (or clears them to the
+// "never contacted" state if none remain). Returns the updated contact.
+// ---------------------------------------------------------------------------
+app.delete('/api/interactions/:id', verifyTeamsToken, (req, res) => {
+  if (!isAdmin(req.teamsUser.email)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const interaction = db.prepare('SELECT * FROM interactions WHERE id = ?').get(req.params.id);
+  if (!interaction) return res.status(404).json({ error: 'Interaction not found' });
+
+  const { contactId } = interaction;
+  db.prepare('DELETE FROM interactions WHERE id = ?').run(req.params.id);
+
+  // Re-derive the contact's cached fields so the reminder clock doesn't point
+  // at a touchpoint that no longer exists.
+  const contact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(contactId);
+  const latest = db.prepare(
+    'SELECT * FROM interactions WHERE contactId = ? ORDER BY occurredAt DESC LIMIT 1'
+  ).get(contactId);
+
+  if (latest) {
+    const nextReminderAt = addDays(latest.occurredAt, (contact && contact.recurrenceDays) || 90);
+    db.prepare(`
+      UPDATE contacts
+      SET lastContactedBy = ?, lastContactedByEmail = ?, lastContactedAt = ?, nextReminderAt = ?
+      WHERE id = ?
+    `).run(latest.authorName, latest.authorEmail || null, latest.occurredAt, nextReminderAt, contactId);
+  } else {
+    // No touchpoints left → back to the same NULL state as a brand-new contact.
+    db.prepare(`
+      UPDATE contacts
+      SET lastContactedBy = NULL, lastContactedByEmail = NULL, lastContactedAt = NULL, nextReminderAt = NULL
+      WHERE id = ?
+    `).run(contactId);
+  }
+
+  const updatedContact = db.prepare('SELECT * FROM contacts WHERE id = ?').get(contactId);
+  res.json(updatedContact);
 });
 
 // ===========================================================================

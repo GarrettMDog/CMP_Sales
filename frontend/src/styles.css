@@ -751,3 +751,18 @@ body {
   color: var(--colorNeutralForeground3);
   font-size: 13px;
 }
+
+/* Inline delete confirmation on a touchpoint (admin only) */
+.timeline-item__delete-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.timeline-item__delete-prompt {
+  font-size: 13px;
+  color: var(--colorPaletteRedForeground1);
+}
+.timeline-item__delete-yes {
+  background: var(--colorPaletteRedBackground3);
+}

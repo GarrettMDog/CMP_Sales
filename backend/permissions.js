@@ -23,4 +23,19 @@ function isExecutive(email) {
   return EXECUTIVE_EMAILS.includes(email.toLowerCase());
 }
 
-module.exports = { isExecutive };
+// Admins are a separate, deliberately narrow list (ADMIN_EMAILS) — distinct
+// from execs. Execs can *see* all private emails; admins can *manage/delete*
+// data (currently: delete touchpoints). Kept separate on purpose so "can view
+// everything" and "can delete things" aren't the same grant.
+//   Example Render env var: ADMIN_EMAILS=garrett@cmppumping.com
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(email) {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+module.exports = { isExecutive, isAdmin };

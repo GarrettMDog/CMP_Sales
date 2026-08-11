@@ -237,6 +237,13 @@ export default function App() {
     setSelectedContact(updated);
   }
 
+  async function handleDeleteInteraction(interactionId) {
+    // Backend returns the recalculated contact (reminder clock re-derived).
+    const updated = await api.deleteInteraction(interactionId, token);
+    setSelectedContact(updated);
+    refreshList();
+  }
+
   function handleDelete(id) {
     setDeleteTargetId(id);
   }
@@ -335,6 +342,7 @@ export default function App() {
                   currentUser={user}
                   onLogInteraction={handleLogInteraction}
                   onEditInteraction={handleEditInteraction}
+                  onDeleteInteraction={handleDeleteInteraction}
                   onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
                   onDelete={handleDelete}
                   allProjects={allProjects}

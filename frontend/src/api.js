@@ -34,6 +34,8 @@ export const api = {
     request(`/api/contacts/${id}/interactions`, { method: 'POST', body: JSON.stringify(data) }, token),
   updateInteraction: (id, data, token) =>
     request(`/api/interactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }, token),
+  deleteInteraction: (id, token) =>
+    request(`/api/interactions/${id}`, { method: 'DELETE' }, token),
 
   dueReminders: (token) => request('/api/reminders/due', {}, token),
   upcomingBirthdays: (withinDays = 30, token) =>
