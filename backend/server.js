@@ -174,12 +174,13 @@ app.post('/api/contacts', verifyTeamsToken, (req, res) => {
     INSERT INTO contacts
       (id, name, company, role, email, phone, birthday, howYouKnowThem, referralSource,
        temperature, recurrenceDays, lastContactedBy, lastContactedByEmail, lastContactedAt,
-       nextReminderAt, createdAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?)
+       nextReminderAt, createdAt, createdBy, createdByEmail)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?)
   `).run(
     id, name.trim(), company || null, role || null, email || null, phone || null,
     birthday || null, howYouKnowThem || null, referralSource || null,
-    temperature || 'Warm', recurrenceDays || 90, now
+    temperature || 'Warm', recurrenceDays || 90, now,
+    req.teamsUser.name || null, req.teamsUser.email || null
   );
 
   const created = db.prepare('SELECT * FROM contacts WHERE id = ?').get(id);

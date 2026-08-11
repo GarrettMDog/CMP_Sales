@@ -101,4 +101,16 @@ if (!hasProjectId) {
   db.exec('ALTER TABLE interactions ADD COLUMN projectId TEXT');
 }
 
+// Safe migration: record who created a contact ("added by"). Existing rows
+// predate this and stay NULL (shown as "—" in the UI) since that history was
+// never captured. New contacts are stamped at creation. System-recorded and
+// read-only — not user-editable.
+const contactColumns = db.prepare("PRAGMA table_info(contacts)").all();
+if (!contactColumns.some((col) => col.name === 'createdBy')) {
+  db.exec('ALTER TABLE contacts ADD COLUMN createdBy TEXT');
+}
+if (!contactColumns.some((col) => col.name === 'createdByEmail')) {
+  db.exec('ALTER TABLE contacts ADD COLUMN createdByEmail TEXT');
+}
+
 module.exports = db;
