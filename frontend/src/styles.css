@@ -745,3 +745,9 @@ body {
   color: var(--colorBrandForeground1);
   margin: 4px 0 0;
 }
+
+/* "Added by" — subtle, muted system-record line on the contact card */
+.contact-detail__added-by {
+  color: var(--colorNeutralForeground3);
+  font-size: 13px;
+}

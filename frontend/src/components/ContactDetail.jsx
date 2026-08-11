@@ -164,6 +164,9 @@ export default function ContactDetail({
         <div>
           <Clock24Regular /> Check in every {contact.recurrenceDays} days
         </div>
+        <div className="contact-detail__added-by">
+          <PersonAdd24Regular /> Added by {contact.createdBy || '—'}
+        </div>
       </div>
 
       {contact.howYouKnowThem && (
