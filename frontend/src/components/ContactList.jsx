@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Input, Button, Badge, Avatar, Dropdown, Option,
 } from '@fluentui/react-components';
@@ -49,9 +49,25 @@ export default function ContactList({
 
   // Companies collapse by default; click a header to expand. State tracks which
   // are open. Any active search/filter force-expands everything (so results are
-  // never hidden), and the group holding the selected contact stays open.
+  // never hidden). Selecting a contact opens its group once (see effect below),
+  // but it can then be collapsed like any other.
   const [expandedCompanies, setExpandedCompanies] = useState(() => new Set());
   const filtersActive = Boolean((search && search.trim()) || temperatureFilter || repFilter);
+
+  // When a contact is selected, open its company group ONCE. Done imperatively
+  // (not as a render-time override) so the user can still collapse it afterward.
+  useEffect(() => {
+    if (!selectedId) return;
+    const sel = contacts.find((c) => c.id === selectedId);
+    if (!sel) return;
+    const company = (sel.company || '').trim() || 'No company set';
+    setExpandedCompanies((prev) => {
+      if (prev.has(company)) return prev;
+      const next = new Set(prev);
+      next.add(company);
+      return next;
+    });
+  }, [selectedId, contacts]);
 
   function toggleCompany(company) {
     setExpandedCompanies((prev) => {
@@ -64,8 +80,7 @@ export default function ContactList({
 
   function isExpanded(group) {
     if (filtersActive) return true;
-    if (expandedCompanies.has(group.company)) return true;
-    return group.contacts.some((c) => c.id === selectedId);
+    return expandedCompanies.has(group.company);
   }
 
   // Expand-all / collapse-all: flips every company at once.
