@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import {
   Input, Button, Badge, Avatar, Dropdown, Option,
 } from '@fluentui/react-components';
-import { Search24Regular, AddCircle24Regular } from '@fluentui/react-icons';
+import {
+  Search24Regular, AddCircle24Regular, ChevronRight24Regular, ChevronDown24Regular,
+} from '@fluentui/react-icons';
 
 const TEMP_COLORS = {
   Hot: 'danger',
@@ -43,6 +46,34 @@ export default function ContactList({
   reps, repFilter, onRepFilterChange,
 }) {
   const groups = groupByCompany(contacts);
+
+  // Companies collapse by default; click a header to expand. State tracks which
+  // are open. Any active search/filter force-expands everything (so results are
+  // never hidden), and the group holding the selected contact stays open.
+  const [expandedCompanies, setExpandedCompanies] = useState(() => new Set());
+  const filtersActive = Boolean((search && search.trim()) || temperatureFilter || repFilter);
+
+  function toggleCompany(company) {
+    setExpandedCompanies((prev) => {
+      const next = new Set(prev);
+      if (next.has(company)) next.delete(company);
+      else next.add(company);
+      return next;
+    });
+  }
+
+  function isExpanded(group) {
+    if (filtersActive) return true;
+    if (expandedCompanies.has(group.company)) return true;
+    return group.contacts.some((c) => c.id === selectedId);
+  }
+
+  // Expand-all / collapse-all: flips every company at once.
+  const allExpanded = groups.length > 0 && groups.every((g) => expandedCompanies.has(g.company));
+  function toggleAll() {
+    setExpandedCompanies(allExpanded ? new Set() : new Set(groups.map((g) => g.company)));
+  }
+
   return (
     <div className="contact-list">
       <div className="contact-list__header">
@@ -85,43 +116,61 @@ export default function ContactList({
       )}
 
       <div className="contact-list__items">
+        {!filtersActive && groups.length > 0 && (
+          <div className="contact-list__toolbar">
+            <button type="button" className="contact-list__expand-toggle" onClick={toggleAll}>
+              {allExpanded ? 'Collapse all' : 'Expand all'}
+            </button>
+          </div>
+        )}
         {contacts.length === 0 && (
           <div className="contact-list__empty">No contacts match yet. Add the first one.</div>
         )}
-        {groups.map((group) => (
-          <div key={group.company} className="company-group">
-            <div className="company-group__header">
-              <span>{group.company}</span>
-              <span className="company-group__count">{group.contacts.length}</span>
+        {groups.map((group) => {
+          const expanded = isExpanded(group);
+          return (
+            <div key={group.company} className="company-group">
+              <button
+                type="button"
+                className="company-group__header"
+                onClick={() => toggleCompany(group.company)}
+                aria-expanded={expanded}
+              >
+                <span className="company-group__chevron">
+                  {expanded ? <ChevronDown24Regular /> : <ChevronRight24Regular />}
+                </span>
+                <span className="company-group__name">{group.company}</span>
+                <span className="company-group__count">{group.contacts.length}</span>
+              </button>
+              {expanded && group.contacts.map((c) => {
+                const overdueDays = daysUntil(c.nextReminderAt);
+                const isOverdue = overdueDays !== null && overdueDays <= 0;
+                return (
+                  <button
+                    type="button"
+                    key={c.id}
+                    className={`contact-row ${selectedId === c.id ? 'contact-row--active' : ''}`}
+                    onClick={() => onSelect(c.id)}
+                  >
+                    <Avatar name={c.name} initials={initials(c.name)} color="colorful" />
+                    <div className="contact-row__body">
+                      <div className="contact-row__top">
+                        <span className="contact-row__name">{c.name}</span>
+                        <Badge appearance="tint" color={TEMP_COLORS[c.temperature] || 'informative'} size="small">
+                          {c.temperature}
+                        </Badge>
+                      </div>
+                      <div className="contact-row__meta">
+                        {c.role || 'No role set'}
+                        {isOverdue && <span className="contact-row__overdue"> · Follow-up due</span>}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            {group.contacts.map((c) => {
-              const overdueDays = daysUntil(c.nextReminderAt);
-              const isOverdue = overdueDays !== null && overdueDays <= 0;
-              return (
-                <button
-                  type="button"
-                  key={c.id}
-                  className={`contact-row ${selectedId === c.id ? 'contact-row--active' : ''}`}
-                  onClick={() => onSelect(c.id)}
-                >
-                  <Avatar name={c.name} initials={initials(c.name)} color="colorful" />
-                  <div className="contact-row__body">
-                    <div className="contact-row__top">
-                      <span className="contact-row__name">{c.name}</span>
-                      <Badge appearance="tint" color={TEMP_COLORS[c.temperature] || 'informative'} size="small">
-                        {c.temperature}
-                      </Badge>
-                    </div>
-                    <div className="contact-row__meta">
-                      {c.role || 'No role set'}
-                      {isOverdue && <span className="contact-row__overdue"> · Follow-up due</span>}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
