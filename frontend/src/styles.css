@@ -766,3 +766,10 @@ body {
 .timeline-item__delete-yes {
   background: var(--colorPaletteRedBackground3);
 }
+
+/* "Created by" — subtle, muted system-record line on the project card */
+.project-detail__created-by {
+  color: var(--colorNeutralForeground3);
+  font-size: 13px;
+  margin-top: 6px;
+}

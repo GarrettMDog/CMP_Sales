@@ -80,6 +80,7 @@ export default function ProjectDetail({
               <Badge appearance="tint" color="important">Bid due {formatDateOnly(project.bidDueDate)}</Badge>
             )}
           </div>
+          <div className="project-detail__created-by">Created by {project.createdBy || '—'}</div>
         </div>
         <div className="contact-detail__actions">
           <Button size="small" appearance="subtle" icon={<Edit24Regular />} onClick={() => onEdit(project)}>Edit</Button>

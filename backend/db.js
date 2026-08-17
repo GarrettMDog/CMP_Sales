@@ -113,4 +113,16 @@ if (!contactColumns.some((col) => col.name === 'createdByEmail')) {
   db.exec('ALTER TABLE contacts ADD COLUMN createdByEmail TEXT');
 }
 
+// Safe migration: record who created a project ("created by"). Same pattern as
+// contacts — existing rows predate this and stay NULL (shown as "—"); new
+// projects are stamped at creation. System-recorded, read-only (the project
+// edit endpoint's field list excludes it).
+const projectColumns = db.prepare("PRAGMA table_info(projects)").all();
+if (!projectColumns.some((col) => col.name === 'createdBy')) {
+  db.exec('ALTER TABLE projects ADD COLUMN createdBy TEXT');
+}
+if (!projectColumns.some((col) => col.name === 'createdByEmail')) {
+  db.exec('ALTER TABLE projects ADD COLUMN createdByEmail TEXT');
+}
+
 module.exports = db;

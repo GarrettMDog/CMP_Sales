@@ -504,12 +504,13 @@ app.post('/api/projects', verifyTeamsToken, (req, res) => {
 
   const id = crypto.randomUUID();
   db.prepare(`
-    INSERT INTO projects (id, name, customer, status, value, bidDueDate, notes, createdAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO projects (id, name, customer, status, value, bidDueDate, notes, createdAt, createdBy, createdByEmail)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, name.trim(), customer || null, status || 'Bidding',
     value != null && value !== '' ? Number(value) : null,
-    bidDueDate || null, notes || null, new Date().toISOString()
+    bidDueDate || null, notes || null, new Date().toISOString(),
+    req.teamsUser.name || null, req.teamsUser.email || null
   );
   res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(id));
 });
