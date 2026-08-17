@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Dialog, DialogSurface, DialogBody, DialogTitle, DialogContent, DialogActions,
-  Button, Input, Field, Dropdown, Option, Textarea,
+  Button, Input, Field, Dropdown, Option, Textarea, Combobox,
 } from '@fluentui/react-components';
 
 const BLANK = {
@@ -15,8 +15,18 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-export default function AddEditContactModal({ open, onClose, onSave, initial }) {
+export default function AddEditContactModal({ open, onClose, onSave, initial, companies = [] }) {
   const [form, setForm] = useState(BLANK);
+
+  // Type-ahead company suggestions: only surface once the rep has typed, and
+  // cap the list so it never becomes a big dropdown. Excludes an exact match of
+  // what's already typed. Reusing an existing spelling is what prevents dupes.
+  const companyQuery = form.company.trim().toLowerCase();
+  const companyMatches = companyQuery
+    ? companies
+      .filter((c) => c && c.toLowerCase().startsWith(companyQuery) && c.toLowerCase() !== companyQuery)
+      .slice(0, 8)
+    : [];
 
   useEffect(() => {
     if (initial) {
@@ -51,7 +61,7 @@ export default function AddEditContactModal({ open, onClose, onSave, initial }) 
 
     onSave({
       name: form.name.trim(),
-      company: form.company,
+      company: form.company.trim(),
       role: form.role,
       email: form.email,
       phone: form.phone,
@@ -73,7 +83,18 @@ export default function AddEditContactModal({ open, onClose, onSave, initial }) 
               <Input value={form.name} onChange={(_, d) => update('name', d.value)} />
             </Field>
             <Field label="Company">
-              <Input value={form.company} onChange={(_, d) => update('company', d.value)} />
+              <Combobox
+                freeform
+                placeholder="Start typing… existing companies will suggest"
+                value={form.company}
+                selectedOptions={[]}
+                onChange={(e) => update('company', e.target.value)}
+                onOptionSelect={(_, d) => { if (d.optionValue) update('company', d.optionValue); }}
+              >
+                {companyMatches.map((c) => (
+                  <Option key={c} value={c}>{c}</Option>
+                ))}
+              </Combobox>
             </Field>
             <Field label="Role / title">
               <Input value={form.role} onChange={(_, d) => update('role', d.value)} />

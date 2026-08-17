@@ -389,6 +389,7 @@ export default function App() {
         <AddEditContactModal
           open={modalOpen}
           initial={editingContact}
+          companies={[...new Set(allContacts.map((c) => (c.company || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))}
           onClose={() => { setModalOpen(false); setEditingContact(null); }}
           onSave={handleSaveContact}
         />
