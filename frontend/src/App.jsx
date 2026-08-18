@@ -302,6 +302,10 @@ export default function App() {
   return (
     <FluentProvider theme={theme}>
       <div className="app-shell">
+        <header className="app-header">
+          <span className="app-header__name">Bedrock</span>
+          <span className="app-header__tagline">Building your foundation</span>
+        </header>
         <div className="app-tabs">
           <TabList selectedValue={activeView} onTabSelect={(_, d) => setActiveView(d.value)}>
             <Tab value="contacts">Contacts</Tab>

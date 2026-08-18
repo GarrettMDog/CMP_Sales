@@ -848,7 +848,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // by a test, which lets tests call the functions below without opening a port.
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`Relationship CRM API listening on port ${PORT}`);
+    console.log(`Bedrock API listening on port ${PORT}`);
   });
 }
 
