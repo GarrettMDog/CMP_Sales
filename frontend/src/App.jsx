@@ -14,6 +14,8 @@ import MessageSearchResults from './components/MessageSearchResults.jsx';
 import ProjectList from './components/ProjectList.jsx';
 import ProjectDetail from './components/ProjectDetail.jsx';
 import AddEditProjectModal from './components/AddEditProjectModal.jsx';
+import ContactPeek from './components/ContactPeek.jsx';
+import ProjectPeek from './components/ProjectPeek.jsx';
 import { useTeamsUser } from './useTeamsUser.js';
 import { api } from './api.js';
 import './styles.css';
@@ -146,6 +148,9 @@ export default function App() {
 
   // Unfiltered projects list for the contact-side "add to project" picker.
   const [allProjects, setAllProjects] = useState([]);
+  const [peekContactId, setPeekContactId] = useState(null);
+  const [peekDefaultProjectId, setPeekDefaultProjectId] = useState(null);
+  const [peekProjectId, setPeekProjectId] = useState(null);
   useEffect(() => {
     if (!token) return;
     api.listProjects({}, token).then(setAllProjects).catch(() => setAllProjects([]));
@@ -354,6 +359,7 @@ export default function App() {
                   onLinkProject={handleLinkContactToProject}
                   onUnlinkProject={handleUnlinkContactFromProject}
                   onOpenProject={(projectId) => { setSelectedProjectId(projectId); setActiveView('projects'); }}
+                  onPeekProject={(projectId) => setPeekProjectId(projectId)}
                 />
               )}
             </div>
@@ -381,6 +387,7 @@ export default function App() {
               onUnlinkContact={handleUnlinkContact}
               onAddEvent={handleAddProjectEvent}
               onOpenContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
+              onPeekContact={(contactId) => { setPeekDefaultProjectId(selectedProjectId); setPeekContactId(contactId); }}
             />
           </div>
         )}
@@ -405,6 +412,24 @@ export default function App() {
           initial={editingProject}
           onClose={() => { setProjectModalOpen(false); setEditingProject(null); }}
           onSave={handleSaveProject}
+        />
+
+        <ContactPeek
+          open={!!peekContactId}
+          contactId={peekContactId}
+          token={token}
+          currentUser={user}
+          defaultProjectId={peekDefaultProjectId}
+          onClose={() => { setPeekContactId(null); setPeekDefaultProjectId(null); }}
+          onOpenFull={(contactId) => { setPeekContactId(null); setPeekDefaultProjectId(null); setSelectedId(contactId); setActiveView('contacts'); }}
+        />
+
+        <ProjectPeek
+          open={!!peekProjectId}
+          projectId={peekProjectId}
+          token={token}
+          onClose={() => setPeekProjectId(null)}
+          onOpenFull={(projectId) => { setPeekProjectId(null); setSelectedProjectId(projectId); setActiveView('projects'); }}
         />
 
         <Dialog open={!!projectDeleteTarget} onOpenChange={(_, data) => { if (!data.open) setProjectDeleteTarget(null); }}>

@@ -77,7 +77,7 @@ function projectMatches(p, query) {
 
 export default function ContactDetail({
   contact, currentUser, onLogInteraction, onEditInteraction, onDeleteInteraction, onEdit, onDelete,
-  allProjects, onLinkProject, onUnlinkProject, onOpenProject,
+  allProjects, onLinkProject, onUnlinkProject, onOpenProject, onPeekProject,
 }) {
   const [type, setType] = useState('call');
   const [note, setNote] = useState('');
@@ -205,7 +205,7 @@ export default function ContactDetail({
           <div className="project-contact-chips">
             {contactProjects.map((p) => (
               <span key={p.id} className="project-contact-chip">
-                <button type="button" className="project-contact-chip__name" onClick={() => onOpenProject && onOpenProject(p.id)}>
+                <button type="button" className="project-contact-chip__name" onClick={() => (onPeekProject || onOpenProject)(p.id)}>
                   {p.name}
                 </button>
                 <button
