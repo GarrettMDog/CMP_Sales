@@ -70,6 +70,20 @@ CREATE TABLE IF NOT EXISTS project_contacts (
   FOREIGN KEY (projectId) REFERENCES projects(id),
   FOREIGN KEY (contactId) REFERENCES contacts(id)
 );
+
+-- Chronological timeline for a project: auto-logged milestones (creation +
+-- every status change) and manual dated notes reps add.
+CREATE TABLE IF NOT EXISTS project_events (
+  id TEXT PRIMARY KEY,
+  projectId TEXT NOT NULL,
+  kind TEXT NOT NULL,          -- 'created' | 'status' | 'note'
+  label TEXT,                  -- the status value for 'status' events; NULL otherwise
+  note TEXT,                   -- text for 'note' events
+  occurredAt TEXT NOT NULL,
+  authorName TEXT,
+  authorEmail TEXT,
+  FOREIGN KEY (projectId) REFERENCES projects(id)
+);
 `);
 
 // Safe migration: add an "editedAt" column to interactions if it doesn't
@@ -123,6 +137,28 @@ if (!projectColumns.some((col) => col.name === 'createdBy')) {
 }
 if (!projectColumns.some((col) => col.name === 'createdByEmail')) {
   db.exec('ALTER TABLE projects ADD COLUMN createdByEmail TEXT');
+}
+
+// Backfill: give every existing project a 'created' timeline event (using its
+// createdAt / createdBy) if it doesn't already have one. Idempotent — the
+// WHERE NOT EXISTS guard means this is a no-op on every boot after the first.
+const crypto = require('crypto');
+const projectsMissingCreated = db.prepare(`
+  SELECT p.id, p.createdAt, p.createdBy, p.createdByEmail
+  FROM projects p
+  WHERE NOT EXISTS (
+    SELECT 1 FROM project_events e WHERE e.projectId = p.id AND e.kind = 'created'
+  )
+`).all();
+const insertCreatedEvent = db.prepare(`
+  INSERT INTO project_events (id, projectId, kind, occurredAt, authorName, authorEmail)
+  VALUES (?, ?, 'created', ?, ?, ?)
+`);
+for (const p of projectsMissingCreated) {
+  insertCreatedEvent.run(
+    crypto.randomUUID(), p.id, p.createdAt || new Date().toISOString(),
+    p.createdBy || null, p.createdByEmail || null
+  );
 }
 
 module.exports = db;

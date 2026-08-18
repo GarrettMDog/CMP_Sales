@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  Avatar, Badge, Button, Dropdown, Option, Combobox,
+  Avatar, Badge, Button, Dropdown, Option, Combobox, Textarea,
 } from '@fluentui/react-components';
 import {
-  Edit24Regular, Delete24Regular, Dismiss24Regular,
+  Edit24Regular, Delete24Regular, Dismiss24Regular, History24Regular as HistoryRegular,
 } from '@fluentui/react-icons';
 import { STATUS_COLORS } from './ProjectList.jsx';
 
@@ -44,10 +44,13 @@ function formatDateOnly(iso) {
 }
 
 export default function ProjectDetail({
-  project, allContacts, onEdit, onDelete, onLinkContact, onUnlinkContact, onOpenContact,
+  project, allContacts, onEdit, onDelete, onLinkContact, onUnlinkContact, onAddEvent, onOpenContact,
 }) {
   const [feedView, setFeedView] = useState('all'); // 'all' | 'tagged'
   const [contactQuery, setContactQuery] = useState('');
+  const [eventNote, setEventNote] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
 
   if (!project) {
     return (
@@ -60,6 +63,31 @@ export default function ProjectDetail({
   const linkedIds = new Set((project.contacts || []).map((c) => c.id));
   const available = (allContacts || []).filter((c) => !linkedIds.has(c.id));
   const conversations = feedView === 'tagged' ? project.taggedConversations : project.allConversations;
+
+  // Friendly labels for auto-logged status milestones.
+  const STATUS_EVENT_LABEL = {
+    Bidding: 'Set to Bidding',
+    Submitted: 'Bid submitted',
+    Won: 'Marked Won',
+    Lost: 'Marked Lost',
+    Complete: 'Marked Complete',
+  };
+  function eventTitle(ev) {
+    if (ev.kind === 'created') return 'Project created';
+    if (ev.kind === 'status') return STATUS_EVENT_LABEL[ev.label] || `Status: ${ev.label}`;
+    return 'Note';
+  }
+
+  async function handleAddNote() {
+    if (!eventNote.trim()) return;
+    setAddingNote(true);
+    try {
+      await onAddEvent(eventNote.trim());
+      setEventNote('');
+    } finally {
+      setAddingNote(false);
+    }
+  }
 
   return (
     <div className="contact-detail">
@@ -83,6 +111,9 @@ export default function ProjectDetail({
           <div className="project-detail__created-by">Created by {project.createdBy || '—'}</div>
         </div>
         <div className="contact-detail__actions">
+          <Button size="small" appearance="subtle" icon={<HistoryRegular />} onClick={() => setTimelineOpen(true)}>
+            Timeline{project.events && project.events.length ? ` (${project.events.length})` : ''}
+          </Button>
           <Button size="small" appearance="subtle" icon={<Edit24Regular />} onClick={() => onEdit(project)}>Edit</Button>
           <Button size="small" appearance="subtle" icon={<Delete24Regular />} onClick={() => onDelete(project)}>Delete</Button>
         </div>
@@ -138,6 +169,56 @@ export default function ProjectDetail({
           ))}
         </div>
       </div>
+
+      {timelineOpen && (
+        <>
+          <div
+            className="timeline-drawer__backdrop"
+            onClick={() => setTimelineOpen(false)}
+            aria-hidden="true"
+          />
+          <aside className="timeline-drawer" role="dialog" aria-label="Project timeline">
+            <div className="timeline-drawer__header">
+              <h3>Timeline</h3>
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
+                onClick={() => setTimelineOpen(false)}
+                aria-label="Close timeline"
+              />
+            </div>
+            <div className="timeline-drawer__body">
+              <div className="project-timeline__add">
+                <Textarea
+                  placeholder="Add a note to the project timeline…"
+                  value={eventNote}
+                  onChange={(_, d) => setEventNote(d.value)}
+                />
+                <Button appearance="primary" disabled={addingNote || !eventNote.trim()} onClick={handleAddNote}>
+                  Add note
+                </Button>
+              </div>
+
+              {(!project.events || project.events.length === 0) && (
+                <p className="contact-detail__empty-history">No timeline events yet.</p>
+              )}
+              {(project.events || []).map((ev) => (
+                <div key={ev.id} className={`project-timeline__item project-timeline__item--${ev.kind}`}>
+                  <span className="project-timeline__dot" aria-hidden="true" />
+                  <div className="project-timeline__body">
+                    <div className="project-timeline__top">
+                      <strong>{eventTitle(ev)}</strong>
+                      <span className="timeline-item__date">{formatDate(ev.occurredAt)}</span>
+                    </div>
+                    {ev.note && <p className="project-timeline__note">{ev.note}</p>}
+                    {ev.authorName && <div className="project-timeline__author">{ev.authorName}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </>
+      )}
 
       <div className="interaction-timeline">
         <div className="project-feed__toggle">

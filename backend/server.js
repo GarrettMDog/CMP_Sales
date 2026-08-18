@@ -512,6 +512,12 @@ app.post('/api/projects', verifyTeamsToken, (req, res) => {
     bidDueDate || null, notes || null, new Date().toISOString(),
     req.teamsUser.name || null, req.teamsUser.email || null
   );
+  // Seed the timeline with a 'created' event.
+  db.prepare(`
+    INSERT INTO project_events (id, projectId, kind, occurredAt, authorName, authorEmail)
+    VALUES (?, ?, 'created', ?, ?, ?)
+  `).run(crypto.randomUUID(), id, new Date().toISOString(), req.teamsUser.name || null, req.teamsUser.email || null);
+
   res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(id));
 });
 
@@ -556,7 +562,12 @@ app.get('/api/projects/:id', verifyTeamsToken, (req, res) => {
   const allConversations = allRaw.filter((i) => canViewInteraction(i, req.teamsUser));
   const taggedConversations = taggedRaw.filter((i) => canViewInteraction(i, req.teamsUser));
 
-  res.json({ ...project, contacts, allConversations, taggedConversations });
+  // Chronological timeline (oldest → newest): created + status changes + notes.
+  const events = db.prepare(`
+    SELECT * FROM project_events WHERE projectId = ? ORDER BY occurredAt ASC
+  `).all(req.params.id);
+
+  res.json({ ...project, contacts, allConversations, taggedConversations, events });
 });
 
 // PUT /api/projects/:id — edit fields / status.
@@ -565,6 +576,8 @@ app.put('/api/projects/:id', verifyTeamsToken, (req, res) => {
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
   const { name, customer, status, value, bidDueDate, notes } = req.body;
+  const newStatus = status || project.status;
+
   db.prepare(`
     UPDATE projects
     SET name = ?, customer = ?, status = ?, value = ?, bidDueDate = ?, notes = ?
@@ -572,13 +585,41 @@ app.put('/api/projects/:id', verifyTeamsToken, (req, res) => {
   `).run(
     name != null ? name.trim() : project.name,
     customer !== undefined ? (customer || null) : project.customer,
-    status || project.status,
+    newStatus,
     value !== undefined ? (value != null && value !== '' ? Number(value) : null) : project.value,
     bidDueDate !== undefined ? (bidDueDate || null) : project.bidDueDate,
     notes !== undefined ? (notes || null) : project.notes,
     req.params.id
   );
+
+  // Auto-log a timeline event when the status actually changes.
+  if (newStatus !== project.status) {
+    db.prepare(`
+      INSERT INTO project_events (id, projectId, kind, label, occurredAt, authorName, authorEmail)
+      VALUES (?, ?, 'status', ?, ?, ?, ?)
+    `).run(crypto.randomUUID(), req.params.id, newStatus, new Date().toISOString(),
+      req.teamsUser.name || null, req.teamsUser.email || null);
+  }
+
   res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id));
+});
+
+// POST /api/projects/:id/events — add a manual dated note to the timeline.
+app.post('/api/projects/:id/events', verifyTeamsToken, (req, res) => {
+  const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const { note, occurredAt } = req.body;
+  if (!note || !note.trim()) return res.status(400).json({ error: 'Note is required' });
+
+  const id = crypto.randomUUID();
+  db.prepare(`
+    INSERT INTO project_events (id, projectId, kind, note, occurredAt, authorName, authorEmail)
+    VALUES (?, ?, 'note', ?, ?, ?, ?)
+  `).run(id, req.params.id, note.trim(), occurredAt || new Date().toISOString(),
+    req.teamsUser.name || null, req.teamsUser.email || null);
+
+  res.status(201).json(db.prepare('SELECT * FROM project_events WHERE id = ?').get(id));
 });
 
 // DELETE /api/projects/:id — removes the project and its contact links.

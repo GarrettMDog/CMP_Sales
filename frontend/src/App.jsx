@@ -195,6 +195,11 @@ export default function App() {
     refreshProjects();
   }
 
+  async function handleAddProjectEvent(note) {
+    await api.addProjectEvent(selectedProjectId, { note }, token);
+    reloadProject();
+  }
+
   // Contact-side linking (both-direction): link/unlink the currently open
   // contact to/from a project, then reload the contact so its projects list
   // (and the log-form picker) updates.
@@ -374,6 +379,7 @@ export default function App() {
               onDelete={(p) => setProjectDeleteTarget(p.id)}
               onLinkContact={handleLinkContact}
               onUnlinkContact={handleUnlinkContact}
+              onAddEvent={handleAddProjectEvent}
               onOpenContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
             />
           </div>

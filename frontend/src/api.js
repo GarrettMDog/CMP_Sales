@@ -64,4 +64,6 @@ export const api = {
     request(`/api/projects/${projectId}/contacts`, { method: 'POST', body: JSON.stringify({ contactId }) }, token),
   unlinkProjectContact: (projectId, contactId, token) =>
     request(`/api/projects/${projectId}/contacts/${contactId}`, { method: 'DELETE' }, token),
+  addProjectEvent: (projectId, data, token) =>
+    request(`/api/projects/${projectId}/events`, { method: 'POST', body: JSON.stringify(data) }, token),
 };
