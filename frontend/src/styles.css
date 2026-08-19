@@ -959,6 +959,19 @@ body {
 .peek__name { font-weight: 600; font-size: 16px; }
 .peek__sub { font-size: 13px; color: var(--colorNeutralForeground3); }
 .peek__contactinfo { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.peek__contactinfo a {
+  color: var(--colorNeutralForeground1);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.peek__followup {
+  font-size: 13px;
+  color: var(--colorNeutralForeground3);
+}
+.peek__followup--due {
+  color: var(--colorPaletteRedForeground1);
+  font-weight: 600;
+}
 .peek__log, .peek__history {
   display: flex; flex-direction: column; gap: 8px;
   border-top: 1px solid var(--colorNeutralStroke2); padding-top: 12px;

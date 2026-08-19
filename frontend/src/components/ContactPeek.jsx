@@ -28,6 +28,17 @@ function formatDate(iso) {
   return `${mm}/${dd}/${yy} ${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
 }
 
+function formatDateOnly(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+}
+
+function daysUntil(iso) {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso) - new Date()) / (1000 * 60 * 60 * 24));
+}
+
 // A quick-reference panel for a contact, opened from inside a project (or
 // anywhere) so you don't lose your place. Shows summary + recent history, lets
 // you log a touchpoint on the spot, and can expand to the full contact page.
@@ -107,6 +118,12 @@ export default function ContactPeek({
             <div className="peek__contactinfo">
               {contact.phone && <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}>{contact.phone}</a>}
               {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+            </div>
+          )}
+
+          {contact.nextReminderAt && (
+            <div className={`peek__followup ${daysUntil(contact.nextReminderAt) <= 0 ? 'peek__followup--due' : ''}`}>
+              {daysUntil(contact.nextReminderAt) <= 0 ? 'Follow-up overdue' : 'Follow-up due'} {formatDateOnly(contact.nextReminderAt)}
             </div>
           )}
 
