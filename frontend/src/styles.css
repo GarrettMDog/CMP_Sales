@@ -402,7 +402,12 @@ body {
 
 .contact-detail__badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+.contact-detail__badges > * {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .contact-detail__actions {
@@ -646,9 +651,13 @@ body {
   }
   .contact-list {
     width: 100%;
-    max-height: 45vh;
     border-right: none;
     border-bottom: 1px solid var(--colorNeutralStroke2);
+  }
+  /* Detail is a slide-over drawer on mobile, so the list fills the space.
+     Only cap it when message-search results render below it in the column. */
+  .app-body--msgsearch .contact-list {
+    max-height: 45vh;
   }
   .contact-detail--empty {
   flex: 0 0 auto;

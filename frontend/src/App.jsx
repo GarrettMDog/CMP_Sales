@@ -16,12 +16,33 @@ import ProjectDetail from './components/ProjectDetail.jsx';
 import AddEditProjectModal from './components/AddEditProjectModal.jsx';
 import ContactPeek from './components/ContactPeek.jsx';
 import ProjectPeek from './components/ProjectPeek.jsx';
+import Drawer from './components/Drawer.jsx';
 import { useTeamsUser } from './useTeamsUser.js';
 import { api } from './api.js';
 import './styles.css';
 
+// Tracks whether we're at the mobile (stacked) breakpoint — matches the 700px
+// CSS breakpoint. Used to render the contact detail as a slide-over drawer on
+// phones while keeping the side-by-side layout on desktop.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(max-width: 700px)').matches
+      : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mq = window.matchMedia('(max-width: 700px)');
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isMobile;
+}
+
 export default function App() {
   const { user, token, loading: userLoading } = useTeamsUser();
+  const isMobile = useIsMobile();
   const [theme, setTheme] = useState(teamsLightTheme);
   const [activeView, setActiveView] = useState('contacts');
 
@@ -327,7 +348,7 @@ export default function App() {
               </div>
             )}
 
-            <div className="app-body">
+            <div className={`app-body ${isMobile && showMessageSearch ? 'app-body--msgsearch' : ''}`}>
               <ContactList
                 contacts={contacts}
                 selectedId={selectedId}
@@ -342,14 +363,16 @@ export default function App() {
                 onRepFilterChange={setRepFilter}
               />
 
-              {showMessageSearch ? (
+              {showMessageSearch && (
                 <MessageSearchResults
                   query={search.trim()}
                   results={messageResults}
                   loading={messageSearchLoading}
                   onSelectContact={handleSelectFromMessageSearch}
                 />
-              ) : (
+              )}
+
+              {!showMessageSearch && !isMobile && (
                 <ContactDetail
                   contact={selectedContact}
                   currentUser={user}
@@ -364,6 +387,29 @@ export default function App() {
                   onOpenProject={(projectId) => { setSelectedProjectId(projectId); setActiveView('projects'); }}
                   onPeekProject={(projectId) => setPeekProjectId(projectId)}
                 />
+              )}
+
+              {isMobile && (
+                <Drawer
+                  open={!showMessageSearch && !!selectedId}
+                  onClose={() => setSelectedId(null)}
+                  title="Contact"
+                >
+                  <ContactDetail
+                    contact={selectedContact}
+                    currentUser={user}
+                    onLogInteraction={handleLogInteraction}
+                    onEditInteraction={handleEditInteraction}
+                    onDeleteInteraction={handleDeleteInteraction}
+                    onEdit={(c) => { setEditingContact(c); setModalOpen(true); }}
+                    onDelete={handleDelete}
+                    allProjects={allProjects}
+                    onLinkProject={handleLinkContactToProject}
+                    onUnlinkProject={handleUnlinkContactFromProject}
+                    onOpenProject={(projectId) => { setSelectedProjectId(projectId); setActiveView('projects'); }}
+                    onPeekProject={(projectId) => setPeekProjectId(projectId)}
+                  />
+                </Drawer>
               )}
             </div>
           </>
@@ -381,17 +427,38 @@ export default function App() {
               statusFilter={projectStatusFilter}
               onStatusFilterChange={setProjectStatusFilter}
             />
-            <ProjectDetail
-              project={selectedProject}
-              allContacts={allContacts}
-              onEdit={(p) => { setEditingProject(p); setProjectModalOpen(true); }}
-              onDelete={(p) => setProjectDeleteTarget(p.id)}
-              onLinkContact={handleLinkContact}
-              onUnlinkContact={handleUnlinkContact}
-              onAddEvent={handleAddProjectEvent}
-              onOpenContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
-              onPeekContact={(contactId) => { setPeekDefaultProjectId(selectedProjectId); setPeekContactId(contactId); }}
-            />
+            {!isMobile && (
+              <ProjectDetail
+                project={selectedProject}
+                allContacts={allContacts}
+                onEdit={(p) => { setEditingProject(p); setProjectModalOpen(true); }}
+                onDelete={(p) => setProjectDeleteTarget(p.id)}
+                onLinkContact={handleLinkContact}
+                onUnlinkContact={handleUnlinkContact}
+                onAddEvent={handleAddProjectEvent}
+                onOpenContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
+                onPeekContact={(contactId) => { setPeekDefaultProjectId(selectedProjectId); setPeekContactId(contactId); }}
+              />
+            )}
+            {isMobile && (
+              <Drawer
+                open={!!selectedProjectId}
+                onClose={() => setSelectedProjectId(null)}
+                title="Project"
+              >
+                <ProjectDetail
+                  project={selectedProject}
+                  allContacts={allContacts}
+                  onEdit={(p) => { setEditingProject(p); setProjectModalOpen(true); }}
+                  onDelete={(p) => setProjectDeleteTarget(p.id)}
+                  onLinkContact={handleLinkContact}
+                  onUnlinkContact={handleUnlinkContact}
+                  onAddEvent={handleAddProjectEvent}
+                  onOpenContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
+                  onPeekContact={(contactId) => { setPeekDefaultProjectId(selectedProjectId); setPeekContactId(contactId); }}
+                />
+              </Drawer>
+            )}
           </div>
         )}
 

@@ -83,6 +83,33 @@ export default function ContactList({
     return expandedCompanies.has(group.company);
   }
 
+  function renderRow(c) {
+    const overdueDays = daysUntil(c.nextReminderAt);
+    const isOverdue = overdueDays !== null && overdueDays <= 0;
+    return (
+      <button
+        type="button"
+        key={c.id}
+        className={`contact-row ${selectedId === c.id ? 'contact-row--active' : ''}`}
+        onClick={() => onSelect(c.id)}
+      >
+        <Avatar name={c.name} initials={initials(c.name)} color="colorful" />
+        <div className="contact-row__body">
+          <div className="contact-row__top">
+            <span className="contact-row__name">{c.name}</span>
+            <Badge appearance="tint" color={TEMP_COLORS[c.temperature] || 'informative'} size="small">
+              {c.temperature}
+            </Badge>
+          </div>
+          <div className="contact-row__meta">
+            {c.company ? c.company : (c.role || 'No role set')}
+            {isOverdue && <span className="contact-row__overdue"> · Follow-up due</span>}
+          </div>
+        </div>
+      </button>
+    );
+  }
+
   // Expand-all / collapse-all: flips every company at once.
   const allExpanded = groups.length > 0 && groups.every((g) => expandedCompanies.has(g.company));
   function toggleAll() {
@@ -141,51 +168,28 @@ export default function ContactList({
         {contacts.length === 0 && (
           <div className="contact-list__empty">No contacts match yet. Add the first one.</div>
         )}
-        {groups.map((group) => {
-          const expanded = isExpanded(group);
-          return (
-            <div key={group.company} className="company-group">
-              <button
-                type="button"
-                className="company-group__header"
-                onClick={() => toggleCompany(group.company)}
-                aria-expanded={expanded}
-              >
-                <span className="company-group__chevron">
-                  {expanded ? <ChevronDown24Regular /> : <ChevronRight24Regular />}
-                </span>
-                <span className="company-group__name">{group.company}</span>
-                <span className="company-group__count">{group.contacts.length}</span>
-              </button>
-              {expanded && group.contacts.map((c) => {
-                const overdueDays = daysUntil(c.nextReminderAt);
-                const isOverdue = overdueDays !== null && overdueDays <= 0;
-                return (
-                  <button
-                    type="button"
-                    key={c.id}
-                    className={`contact-row ${selectedId === c.id ? 'contact-row--active' : ''}`}
-                    onClick={() => onSelect(c.id)}
-                  >
-                    <Avatar name={c.name} initials={initials(c.name)} color="colorful" />
-                    <div className="contact-row__body">
-                      <div className="contact-row__top">
-                        <span className="contact-row__name">{c.name}</span>
-                        <Badge appearance="tint" color={TEMP_COLORS[c.temperature] || 'informative'} size="small">
-                          {c.temperature}
-                        </Badge>
-                      </div>
-                      <div className="contact-row__meta">
-                        {c.role || 'No role set'}
-                        {isOverdue && <span className="contact-row__overdue"> · Follow-up due</span>}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
+        {filtersActive
+          ? contacts.map((c) => renderRow(c))
+          : groups.map((group) => {
+            const expanded = isExpanded(group);
+            return (
+              <div key={group.company} className="company-group">
+                <button
+                  type="button"
+                  className="company-group__header"
+                  onClick={() => toggleCompany(group.company)}
+                  aria-expanded={expanded}
+                >
+                  <span className="company-group__chevron">
+                    {expanded ? <ChevronDown24Regular /> : <ChevronRight24Regular />}
+                  </span>
+                  <span className="company-group__name">{group.company}</span>
+                  <span className="company-group__count">{group.contacts.length}</span>
+                </button>
+                {expanded && group.contacts.map((c) => renderRow(c))}
+              </div>
+            );
+          })}
       </div>
     </div>
   );
