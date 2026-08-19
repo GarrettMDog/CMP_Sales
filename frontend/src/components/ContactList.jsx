@@ -157,14 +157,15 @@ export default function ContactList({
         </Dropdown>
       )}
 
+      {!filtersActive && groups.length > 0 && (
+        <div className="contact-list__toolbar">
+          <button type="button" className="contact-list__expand-toggle" onClick={toggleAll}>
+            {allExpanded ? 'Collapse all' : 'Expand all'}
+          </button>
+        </div>
+      )}
+
       <div className="contact-list__items">
-        {!filtersActive && groups.length > 0 && (
-          <div className="contact-list__toolbar">
-            <button type="button" className="contact-list__expand-toggle" onClick={toggleAll}>
-              {allExpanded ? 'Collapse all' : 'Expand all'}
-            </button>
-          </div>
-        )}
         {contacts.length === 0 && (
           <div className="contact-list__empty">No contacts match yet. Add the first one.</div>
         )}

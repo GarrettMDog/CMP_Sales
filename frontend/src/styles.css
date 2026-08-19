@@ -228,6 +228,7 @@ body {
 .contact-list {
   width: 320px;
   min-width: 280px;
+  min-height: 0;
   border-right: 1px solid var(--colorNeutralStroke2);
   display: flex;
   flex-direction: column;
@@ -238,6 +239,7 @@ body {
   display: flex;
   gap: 8px;
   padding: 12px;
+  flex-shrink: 0;
 }
 
 .contact-list__header > :first-child {
@@ -246,10 +248,12 @@ body {
 
 .contact-list__filter {
   margin: 0 12px 8px;
+  flex-shrink: 0;
 }
 
 .contact-list__items {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -384,6 +388,8 @@ body {
   display: flex;
   gap: 16px;
   align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: space-between;
 }
 
 .contact-detail__heading {
@@ -413,6 +419,7 @@ body {
 .contact-detail__actions {
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .contact-detail__facts {
@@ -651,13 +658,15 @@ body {
   }
   .contact-list {
     width: 100%;
+    flex: 1;
+    min-height: 0;
     border-right: none;
     border-bottom: 1px solid var(--colorNeutralStroke2);
   }
   /* Detail is a slide-over drawer on mobile, so the list fills the space.
      Only cap it when message-search results render below it in the column. */
   .app-body--msgsearch .contact-list {
-    max-height: 45vh;
+    flex: 0 0 45vh;
   }
   .contact-detail--empty {
   flex: 0 0 auto;
@@ -815,6 +824,7 @@ body {
   display: flex;
   justify-content: flex-end;
   padding: 4px 12px;
+  flex-shrink: 0;
 }
 .contact-list__expand-toggle {
   background: none;
@@ -952,4 +962,18 @@ body {
 .app-header__tagline {
   font-size: 13px;
   color: var(--colorNeutralForeground3);
+}
+
+/* Safety net: keep detail cards and drawers from ever scrolling horizontally;
+   long content (emails, notes) wraps instead of forcing a sideways scroll. */
+.contact-detail,
+.drawer__body,
+.peek {
+  overflow-x: hidden;
+}
+.contact-detail__heading,
+.contact-detail__facts,
+.peek__contactinfo {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
