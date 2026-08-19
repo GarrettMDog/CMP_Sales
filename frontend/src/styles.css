@@ -389,7 +389,6 @@ body {
   gap: 16px;
   align-items: flex-start;
   flex-wrap: wrap;
-  justify-content: space-between;
 }
 
 .contact-detail__heading {
@@ -965,15 +964,9 @@ body {
 }
 
 /* Safety net: keep detail cards and drawers from ever scrolling horizontally;
-   long content (emails, notes) wraps instead of forcing a sideways scroll. */
+   long content wraps instead of forcing a sideways scroll. */
 .contact-detail,
 .drawer__body,
 .peek {
   overflow-x: hidden;
-}
-.contact-detail__heading,
-.contact-detail__facts,
-.peek__contactinfo {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
