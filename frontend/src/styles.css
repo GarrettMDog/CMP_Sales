@@ -244,6 +244,7 @@ body {
 
 .contact-list__header > :first-child {
   flex: 1;
+  min-width: 0;
 }
 
 .contact-list__filter {
@@ -588,12 +589,17 @@ body {
 
 .timeline-item__body {
   flex: 1;
+  min-width: 0;
+}
+.timeline-item__body p {
+  overflow-wrap: break-word;
 }
 
 .timeline-item__top {
   display: flex;
   gap: 8px;
   align-items: baseline;
+  flex-wrap: wrap;
   font-size: 13px;
 }
 
@@ -678,6 +684,12 @@ body {
   }
   .contact-detail {
     padding: 16px;
+  }
+  /* Stack facts vertically on phones so a wide row (e.g. "Check in every 30
+     days") never runs past the edge. */
+  .contact-detail__facts {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 
@@ -876,12 +888,25 @@ body {
   overflow-y: auto;
   padding: 16px;
 }
-/* Full-screen on phones (mobile-first — reps live here). */
-@media (max-width: 600px) {
+/* Full-screen on phones (mobile-first — reps live here). Matches the 700px
+   isMobile breakpoint so there's no gap where the drawer is only partial-width. */
+@media (max-width: 700px) {
   .drawer {
     width: 100%;
     max-width: 100%;
   }
+}
+/* Inside a drawer, the detail pane shouldn't keep its desktop flex/padding/scroll
+   — the drawer body already provides padding and scrolling. This makes the card
+   fill exactly the drawer width instead of rendering wider and clipping. */
+.drawer__body .contact-detail,
+.drawer__body .project-detail {
+  flex: initial;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
 }
 .project-timeline__add {
   display: flex;
@@ -909,7 +934,7 @@ body {
 .project-timeline__item--created .project-timeline__dot { background: var(--colorNeutralForeground3); }
 .project-timeline__item--status .project-timeline__dot { background: var(--colorBrandBackground); }
 .project-timeline__item--note .project-timeline__dot { background: var(--colorPaletteMarigoldBackground3); }
-.project-timeline__body { flex: 1; }
+.project-timeline__body { flex: 1; min-width: 0; }
 .project-timeline__top {
   display: flex;
   gap: 8px;
@@ -920,6 +945,7 @@ body {
   margin: 2px 0 0;
   font-size: 14px;
   color: var(--colorNeutralForeground2);
+  overflow-wrap: break-word;
 }
 .project-timeline__author {
   font-size: 12px;
