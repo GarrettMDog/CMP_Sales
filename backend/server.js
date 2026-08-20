@@ -869,6 +869,20 @@ app.get('/api/activity/rep/:email/scorecard', verifyTeamsToken, (req, res) => {
   const dollarsWon = wonProjects.reduce((s, p) => s + (p.value || 0), 0);
   const wonMissingValue = wonProjects.filter((p) => p.value == null).length;
 
+  // Projects the rep created that were submitted/bid within the window (reached
+  // "Submitted" status). This is the denominator for win rate: won / bid.
+  const bidProjects = db.prepare(`
+    SELECT DISTINCT p.id, p.value
+    FROM projects p
+    JOIN project_events e ON e.projectId = p.id
+    WHERE LOWER(p.createdByEmail) = ?
+      AND e.kind = 'status' AND e.label = 'Submitted'
+      AND e.occurredAt >= ?
+  `).all(target, sinceIso);
+  const projectsBid = bidProjects.length;
+  const dollarsBid = bidProjects.reduce((s, p) => s + (p.value || 0), 0);
+  const bidMissingValue = bidProjects.filter((p) => p.value == null).length;
+
   const contactsAdded = db.prepare(`
     SELECT COUNT(*) AS n FROM contacts
     WHERE LOWER(createdByEmail) = ? AND createdAt >= ?
@@ -880,15 +894,34 @@ app.get('/api/activity/rep/:email/scorecard', verifyTeamsToken, (req, res) => {
   `).get(target, sinceIso).n;
   const weeklyInteractions = Math.round((interactions / (range / 7)) * 10) / 10;
 
+  // Full activity log for the window — the rep's interactions, newest first,
+  // with the contact each was with. Fills the panel below the metrics. Capped
+  // to keep the payload sane; recentCapped flags if there were more.
+  const CAP = 300;
+  const recentInteractions = db.prepare(`
+    SELECT i.id, i.type, i.note, i.occurredAt, c.name AS contactName, c.id AS contactId
+    FROM interactions i
+    JOIN contacts c ON c.id = i.contactId
+    WHERE LOWER(i.authorEmail) = ? AND i.occurredAt >= ?
+    ORDER BY i.occurredAt DESC
+    LIMIT ?
+  `).all(target, sinceIso, CAP);
+  const recentCapped = interactions > CAP;
+
   res.json({
     email: target,
     rangeDays: range,
     projectsWon,
     dollarsWon,
     wonMissingValue,
+    projectsBid,
+    dollarsBid,
+    bidMissingValue,
     contactsAdded,
     interactions,
     weeklyInteractions,
+    recentInteractions,
+    recentCapped,
   });
 });
 

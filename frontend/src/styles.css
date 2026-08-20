@@ -1064,12 +1064,31 @@ body {
 .scorecard__range-btn--active {
   background: var(--colorBrandBackground); color: #fff; border-color: var(--colorBrandBackground);
 }
-.scorecard__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.scorecard__metric {
-  background: var(--colorNeutralBackground2); border-radius: 10px; padding: 14px;
+.scorecard__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Stack all metrics in one column on phones (matches the rest of mobile). */
+@media (max-width: 700px) {
+  .scorecard__grid { grid-template-columns: 1fr; }
 }
-.scorecard__value { font-size: 22px; font-weight: 700; }
-.scorecard__label { font-size: 12px; color: var(--colorNeutralForeground3); margin-top: 2px; }
-.scorecard__footnote { font-size: 12px; color: var(--colorPaletteYellowForeground1); margin: 0; }
+.scorecard__metric {
+  background: var(--colorNeutralBackground2); border-radius: 10px; padding: 12px 14px;
+}
+.scorecard__metric--wide { grid-column: 1 / -1; }
+.scorecard__value { font-size: 21px; font-weight: 700; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.scorecard__of { color: var(--colorNeutralForeground3); font-weight: 600; font-size: 17px; }
+.scorecard__rate {
+  font-size: 12px; font-weight: 600; color: var(--colorPaletteGreenForeground1);
+  background: var(--colorPaletteGreenBackground2); border-radius: 8px; padding: 1px 8px; margin-left: auto;
+}
+.scorecard__label { font-size: 12px; color: var(--colorNeutralForeground3); margin-top: 3px; }
+.scorecard__footnote { font-size: 12px; color: var(--colorPaletteYellowForeground1); margin: 8px 0 0; }
 .scorecard__footnote--muted { color: var(--colorNeutralForeground3); }
 .scorecard__empty { color: var(--colorNeutralForeground3); font-size: 14px; }
+
+/* Activity log filling the panel below the metrics */
+.scorecard__log { border-top: 1px solid var(--colorNeutralStroke2); padding-top: 14px; margin-top: 4px; }
+.scorecard__log-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.scorecard__event { padding: 8px 0; border-bottom: 1px solid var(--colorNeutralStroke3); }
+.scorecard__event-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.scorecard__event-type { font-size: 12px; color: var(--colorNeutralForeground3); }
+.scorecard__event-date { font-size: 12px; color: var(--colorNeutralForeground3); margin-left: auto; }
+.scorecard__event-note { margin: 2px 0 0; font-size: 13px; color: var(--colorNeutralForeground2); overflow-wrap: break-word; }
