@@ -1011,8 +1011,16 @@ body {
 }
 
 /* ---- My Day (rep view: follow-ups + projects) ---- */
-.myday-wrap { flex: 1; overflow-y: auto; }
-.myday { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+.myday-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.myday {
+  max-width: 900px;
+  margin: 0;
+  padding: 24px 24px 44px;
+}
 .myday__greeting { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
 .myday__section { margin-bottom: 28px; }
 .myday__section h3 {
