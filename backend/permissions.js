@@ -38,4 +38,4 @@ function isAdmin(email) {
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-module.exports = { isExecutive, isAdmin };
+module.exports = { isExecutive, isAdmin, EXECUTIVE_EMAILS };

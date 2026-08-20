@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const db = require('./db');
 const { fireReminderForContact } = require('./notifications');
 const { verifyTeamsToken } = require('./auth');
-const { isExecutive, isAdmin } = require('./permissions');
+const { isExecutive, isAdmin, EXECUTIVE_EMAILS } = require('./permissions');
 const graph = require('./graph');
 
 const app = express();
@@ -779,31 +779,41 @@ app.get('/api/activity/summary', verifyTeamsToken, (req, res) => {
   since.setDate(since.getDate() - range);
   const sinceIso = since.toISOString();
 
+  // Exclude executives from the activity board — leadership does the measuring,
+  // they aren't reps on the leaderboard. Their touchpoints are dropped from the
+  // per-rep tally, type breakdown, recent feed, and total so everything agrees.
+  // (authorEmail IS NULL is kept — a null author isn't an exec.)
+  const execList = EXECUTIVE_EMAILS;
+  const execClause = execList.length
+    ? `AND (authorEmail IS NULL OR LOWER(authorEmail) NOT IN (${execList.map(() => '?').join(',')}))`
+    : '';
+  const execParams = execList; // already lowercased in permissions.js
+
   const perRep = db.prepare(`
     SELECT authorName as name, authorEmail as email, COUNT(*) as touchpoints
     FROM interactions
-    WHERE occurredAt >= ?
+    WHERE occurredAt >= ? ${execClause}
     GROUP BY authorName, authorEmail
     ORDER BY touchpoints DESC
-  `).all(sinceIso);
+  `).all(sinceIso, ...execParams);
 
   const perType = db.prepare(`
     SELECT type, COUNT(*) as count
     FROM interactions
-    WHERE occurredAt >= ?
+    WHERE occurredAt >= ? ${execClause}
     GROUP BY type
     ORDER BY count DESC
-  `).all(sinceIso);
+  `).all(sinceIso, ...execParams);
 
   const recentRaw = db.prepare(`
     SELECT i.id, i.authorName, i.authorEmail, i.visibility, i.type, i.note,
            i.occurredAt, c.name as contactName, c.id as contactId
     FROM interactions i
     JOIN contacts c ON c.id = i.contactId
-    WHERE i.occurredAt >= ?
+    WHERE i.occurredAt >= ? ${execClause.replace(/authorEmail/g, 'i.authorEmail')}
     ORDER BY i.occurredAt DESC
     LIMIT 50
-  `).all(sinceIso);
+  `).all(sinceIso, ...execParams);
 
   // Drop private emails the viewer can't see, then cap at 25. (Counts above
   // are left global on purpose — a touchpoint tally isn't sensitive the way
