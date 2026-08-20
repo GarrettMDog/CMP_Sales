@@ -1043,3 +1043,25 @@ body {
 }
 .myday__due--urgent { color: var(--colorPaletteRedForeground1); font-weight: 600; }
 .myday__shared { color: var(--colorNeutralForeground3); }
+
+/* ---- Rep scorecard (drawer from Activity dashboard) ---- */
+.rep-row--clickable { cursor: pointer; border-radius: 8px; }
+.rep-row--clickable:hover { background: var(--colorNeutralBackground1Hover); }
+.scorecard { display: flex; flex-direction: column; gap: 16px; }
+.scorecard__range { display: flex; gap: 6px; }
+.scorecard__range-btn {
+  border: 1px solid var(--colorNeutralStroke1); background: none; cursor: pointer;
+  border-radius: 6px; padding: 4px 12px; font-size: 13px; color: var(--colorNeutralForeground2);
+}
+.scorecard__range-btn--active {
+  background: var(--colorBrandBackground); color: #fff; border-color: var(--colorBrandBackground);
+}
+.scorecard__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.scorecard__metric {
+  background: var(--colorNeutralBackground2); border-radius: 10px; padding: 14px;
+}
+.scorecard__value { font-size: 22px; font-weight: 700; }
+.scorecard__label { font-size: 12px; color: var(--colorNeutralForeground3); margin-top: 2px; }
+.scorecard__footnote { font-size: 12px; color: var(--colorPaletteYellowForeground1); margin: 0; }
+.scorecard__footnote--muted { color: var(--colorNeutralForeground3); }
+.scorecard__empty { color: var(--colorNeutralForeground3); font-size: 14px; }

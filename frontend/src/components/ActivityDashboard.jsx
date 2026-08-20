@@ -3,6 +3,7 @@ import {
   Avatar, Badge, Dropdown, Option, Spinner, Card,
 } from '@fluentui/react-components';
 import { api } from '../api.js';
+import RepScorecard from './RepScorecard.jsx';
 
 const TYPE_LABELS = {
   call: 'Phone call',
@@ -23,11 +24,12 @@ function formatDateTime(iso) {
     + ' · ' + new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-export default function ActivityDashboard({ onSelectContact, token }) {
+export default function ActivityDashboard({ onSelectContact, token, currentUser }) {
   const [range, setRange] = useState('week');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [scorecard, setScorecard] = useState(null); // { email, name } or null
 
   useEffect(() => {
     if (!token) return;
@@ -83,19 +85,29 @@ export default function ActivityDashboard({ onSelectContact, token }) {
             <div className="rep-leaderboard">
               <h3>Touchpoints per rep</h3>
               {data.perRep.length === 0 && <p className="muted">No activity logged in this window yet.</p>}
-              {data.perRep.map((r) => (
-                <div key={r.email || r.name} className="rep-row">
-                  <Avatar name={r.name} initials={initials(r.name)} size={28} color="colorful" />
-                  <span className="rep-row__name">{r.name}</span>
-                  <div className="rep-row__bar-track">
-                    <div
-                      className="rep-row__bar"
-                      style={{ width: `${maxTouchpoints ? (r.touchpoints / maxTouchpoints) * 100 : 0}%` }}
-                    />
+              {data.perRep.map((r) => {
+                const canView = currentUser && (currentUser.isExecutive
+                  || (currentUser.email || '').toLowerCase() === (r.email || '').toLowerCase());
+                return (
+                  <div
+                    key={r.email || r.name}
+                    className={`rep-row ${canView ? 'rep-row--clickable' : ''}`}
+                    onClick={canView ? () => setScorecard({ email: r.email, name: r.name }) : undefined}
+                    role={canView ? 'button' : undefined}
+                    tabIndex={canView ? 0 : undefined}
+                  >
+                    <Avatar name={r.name} initials={initials(r.name)} size={28} color="colorful" />
+                    <span className="rep-row__name">{r.name}</span>
+                    <div className="rep-row__bar-track">
+                      <div
+                        className="rep-row__bar"
+                        style={{ width: `${maxTouchpoints ? (r.touchpoints / maxTouchpoints) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="rep-row__count">{r.touchpoints}</span>
                   </div>
-                  <span className="rep-row__count">{r.touchpoints}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="recent-feed">
@@ -126,6 +138,14 @@ export default function ActivityDashboard({ onSelectContact, token }) {
           </div>
         </>
       )}
+
+      <RepScorecard
+        open={!!scorecard}
+        email={scorecard && scorecard.email}
+        name={scorecard && scorecard.name}
+        token={token}
+        onClose={() => setScorecard(null)}
+      />
     </div>
   );
 }

@@ -67,4 +67,6 @@ export const api = {
   addProjectEvent: (projectId, data, token) =>
     request(`/api/projects/${projectId}/events`, { method: 'POST', body: JSON.stringify(data) }, token),
   getMyDay: (token) => request('/api/my/day', {}, token),
+  getRepScorecard: (email, range, token) =>
+    request(`/api/activity/rep/${encodeURIComponent(email)}/scorecard?range=${range}`, {}, token),
 };

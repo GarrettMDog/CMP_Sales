@@ -825,6 +825,64 @@ app.get('/api/activity/summary', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/activity/rep/:email/scorecard?range=30|90|365
+//   Per-rep leadership metrics. Gated: execs can view any rep; a rep can view
+//   only their own row (self-coaching). Metrics over the selected window:
+//   projects won (+ $ won, with a missing-value count), contacts added, and
+//   average interactions/week.
+// ---------------------------------------------------------------------------
+app.get('/api/activity/rep/:email/scorecard', verifyTeamsToken, (req, res) => {
+  const target = decodeURIComponent(req.params.email || '').toLowerCase();
+  const me = (req.teamsUser.email || '').toLowerCase();
+  if (!isExecutive(req.teamsUser.email) && me !== target) {
+    return res.status(403).json({ error: 'You can only view your own scorecard.' });
+  }
+
+  const range = [30, 90, 365].includes(Number(req.query.range)) ? Number(req.query.range) : 90;
+  const since = new Date();
+  since.setDate(since.getDate() - range);
+  const sinceIso = since.toISOString();
+
+  // Projects the rep created that were marked Won within the window (uses the
+  // timeline's status events). Note: wins recorded before timeline tracking
+  // existed won't carry a Won event, so windowed wins are accurate going
+  // forward. $ won sums project value; blanks are surfaced as a footnote.
+  const wonProjects = db.prepare(`
+    SELECT DISTINCT p.id, p.value
+    FROM projects p
+    JOIN project_events e ON e.projectId = p.id
+    WHERE LOWER(p.createdByEmail) = ?
+      AND e.kind = 'status' AND e.label = 'Won'
+      AND e.occurredAt >= ?
+  `).all(target, sinceIso);
+  const projectsWon = wonProjects.length;
+  const dollarsWon = wonProjects.reduce((s, p) => s + (p.value || 0), 0);
+  const wonMissingValue = wonProjects.filter((p) => p.value == null).length;
+
+  const contactsAdded = db.prepare(`
+    SELECT COUNT(*) AS n FROM contacts
+    WHERE LOWER(createdByEmail) = ? AND createdAt >= ?
+  `).get(target, sinceIso).n;
+
+  const interactions = db.prepare(`
+    SELECT COUNT(*) AS n FROM interactions
+    WHERE LOWER(authorEmail) = ? AND occurredAt >= ?
+  `).get(target, sinceIso).n;
+  const weeklyInteractions = Math.round((interactions / (range / 7)) * 10) / 10;
+
+  res.json({
+    email: target,
+    rangeDays: range,
+    projectsWon,
+    dollarsWon,
+    wonMissingValue,
+    contactsAdded,
+    interactions,
+    weeklyInteractions,
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/reminders/due
 // ---------------------------------------------------------------------------
 app.get('/api/reminders/due', verifyTeamsToken, (req, res) => {

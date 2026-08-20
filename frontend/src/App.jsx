@@ -481,6 +481,7 @@ export default function App() {
           <ActivityDashboard
             onSelectContact={(contactId) => { setSelectedId(contactId); setActiveView('contacts'); }}
             token={token}
+            currentUser={user}
           />
         )}
 
