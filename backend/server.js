@@ -101,6 +101,86 @@ app.get('/api/me', verifyTeamsToken, (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/my/day — the rep's personal view.
+//   followups: contacts THIS rep has interacted with, on the rep's OWN clock
+//     (their last touch + the contact's recurrence). Participation-based, so a
+//     contact worked by multiple reps appears on each of their lists with its
+//     own per-rep due date and a "shared" flag. No participation window — the
+//     team-wide reminders banner is the catch-all; smart sort keeps the
+//     relevant ones on top and lets ancient one-offs sink. Includes everything
+//     overdue plus anything coming due within the next 30 days.
+//   projects: projects this rep created, soonest bid date first.
+// ---------------------------------------------------------------------------
+app.get('/api/my/day', verifyTeamsToken, (req, res) => {
+  const me = (req.teamsUser.email || '').toLowerCase();
+
+  // Contacts I've touched + my most recent touch with each.
+  const rows = db.prepare(`
+    SELECT c.id, c.name, c.company, c.temperature, c.recurrenceDays,
+           MAX(i.occurredAt) AS myLastTouch
+    FROM contacts c
+    JOIN interactions i ON i.contactId = c.id
+    WHERE LOWER(i.authorEmail) = ?
+    GROUP BY c.id
+  `).all(me);
+
+  // Other reps who've also touched these contacts (for the "Shared" badge).
+  const sharedMap = {};
+  const ids = rows.map((r) => r.id);
+  if (ids.length) {
+    const placeholders = ids.map(() => '?').join(',');
+    const others = db.prepare(`
+      SELECT DISTINCT contactId, authorName
+      FROM interactions
+      WHERE contactId IN (${placeholders})
+        AND authorName IS NOT NULL
+        AND LOWER(authorEmail) != ?
+    `).all(...ids, me);
+    for (const o of others) {
+      (sharedMap[o.contactId] = sharedMap[o.contactId] || []).push(o.authorName);
+    }
+  }
+
+  const now = new Date();
+  const SOON_DAYS = 30;
+  const followups = rows
+    .map((r) => {
+      const dueAt = addDays(r.myLastTouch, r.recurrenceDays || 90);
+      const daysUntil = Math.ceil((new Date(dueAt) - now) / 86400000);
+      return {
+        id: r.id,
+        name: r.name,
+        company: r.company,
+        temperature: r.temperature,
+        myLastTouch: r.myLastTouch,
+        dueAt,
+        daysUntil,
+        overdue: daysUntil <= 0,
+        sharedWith: sharedMap[r.id] || [],
+      };
+    })
+    // Overdue (any age) + anything coming due within SOON_DAYS.
+    .filter((f) => f.overdue || f.daysUntil <= SOON_DAYS)
+    .sort((a, b) => {
+      // Overdue first; within overdue, most-recently-due on top (ancient sinks).
+      // Then upcoming, soonest first.
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+      if (a.overdue) return new Date(b.dueAt) - new Date(a.dueAt);
+      return new Date(a.dueAt) - new Date(b.dueAt);
+    });
+
+  const projects = db.prepare(`
+    SELECT id, name, customer, status, value, bidDueDate
+    FROM projects
+    WHERE LOWER(createdByEmail) = ?
+    ORDER BY (bidDueDate IS NULL), bidDueDate ASC
+  `).all(me);
+
+  res.json({ followups, projects });
+});
+
+
+// ---------------------------------------------------------------------------
 // GET /api/contacts  (list, with optional filters)
 // ---------------------------------------------------------------------------
 app.get('/api/contacts', verifyTeamsToken, (req, res) => {

@@ -6,6 +6,7 @@ import {
 import { app } from '@microsoft/teams-js';
 
 import ContactList from './components/ContactList.jsx';
+import MyDay from './components/MyDay.jsx';
 import ContactDetail from './components/ContactDetail.jsx';
 import AddEditContactModal from './components/AddEditContactModal.jsx';
 import RemindersBanner from './components/RemindersBanner.jsx';
@@ -44,7 +45,7 @@ export default function App() {
   const { user, token, loading: userLoading } = useTeamsUser();
   const isMobile = useIsMobile();
   const [theme, setTheme] = useState(teamsLightTheme);
-  const [activeView, setActiveView] = useState('contacts');
+  const [activeView, setActiveView] = useState('myday');
 
   const [contacts, setContacts] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -172,6 +173,7 @@ export default function App() {
   const [peekContactId, setPeekContactId] = useState(null);
   const [peekDefaultProjectId, setPeekDefaultProjectId] = useState(null);
   const [peekProjectId, setPeekProjectId] = useState(null);
+  const [myDayRefresh, setMyDayRefresh] = useState(0);
   useEffect(() => {
     if (!token) return;
     api.listProjects({}, token).then(setAllProjects).catch(() => setAllProjects([]));
@@ -328,11 +330,24 @@ export default function App() {
         </header>
         <div className="app-tabs">
           <TabList selectedValue={activeView} onTabSelect={(_, d) => setActiveView(d.value)}>
+            <Tab value="myday">My Day</Tab>
             <Tab value="contacts">Contacts</Tab>
             <Tab value="projects">Projects</Tab>
             <Tab value="activity">Activity</Tab>
           </TabList>
         </div>
+
+        {activeView === 'myday' && (
+          <div className="myday-wrap">
+            <MyDay
+              token={token}
+              userName={user && user.name}
+              refreshSignal={myDayRefresh}
+              onPeekContact={(contactId) => { setPeekDefaultProjectId(null); setPeekContactId(contactId); }}
+              onPeekProject={(projectId) => setPeekProjectId(projectId)}
+            />
+          </div>
+        )}
 
         {activeView === 'contacts' && (
           <>
@@ -490,7 +505,7 @@ export default function App() {
           token={token}
           currentUser={user}
           defaultProjectId={peekDefaultProjectId}
-          onClose={() => { setPeekContactId(null); setPeekDefaultProjectId(null); }}
+          onClose={() => { setPeekContactId(null); setPeekDefaultProjectId(null); setMyDayRefresh((x) => x + 1); }}
           onOpenFull={(contactId) => { setPeekContactId(null); setPeekDefaultProjectId(null); setSelectedId(contactId); setActiveView('contacts'); }}
         />
 

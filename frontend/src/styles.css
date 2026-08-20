@@ -1009,3 +1009,37 @@ body {
 .peek {
   overflow-x: hidden;
 }
+
+/* ---- My Day (rep view: follow-ups + projects) ---- */
+.myday-wrap { flex: 1; overflow-y: auto; }
+.myday { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+.myday__greeting { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+.myday__section { margin-bottom: 28px; }
+.myday__section h3 {
+  font-size: 15px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+}
+.myday__count {
+  background: var(--colorNeutralBackground3); border-radius: 10px;
+  padding: 0 8px; font-size: 12px; font-weight: 600;
+}
+.myday__subhead {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--colorNeutralForeground3); margin: 12px 0 4px;
+}
+.myday__subhead--due { color: var(--colorPaletteRedForeground1); }
+.myday__empty { color: var(--colorNeutralForeground3); font-size: 14px; }
+.myday__row {
+  display: flex; gap: 12px; align-items: center; width: 100%;
+  padding: 10px 8px; border: none; background: none; cursor: pointer;
+  text-align: left; border-radius: 8px; border-bottom: 1px solid var(--colorNeutralStroke2);
+}
+.myday__row:hover { background: var(--colorNeutralBackground1Hover); }
+.myday__row-body { flex: 1; min-width: 0; }
+.myday__row-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.myday__row-name { font-weight: 600; font-size: 15px; }
+.myday__row-meta {
+  font-size: 13px; color: var(--colorNeutralForeground3); margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.myday__due--urgent { color: var(--colorPaletteRedForeground1); font-weight: 600; }
+.myday__shared { color: var(--colorNeutralForeground3); }

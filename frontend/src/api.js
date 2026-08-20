@@ -66,4 +66,5 @@ export const api = {
     request(`/api/projects/${projectId}/contacts/${contactId}`, { method: 'DELETE' }, token),
   addProjectEvent: (projectId, data, token) =>
     request(`/api/projects/${projectId}/events`, { method: 'POST', body: JSON.stringify(data) }, token),
+  getMyDay: (token) => request('/api/my/day', {}, token),
 };
