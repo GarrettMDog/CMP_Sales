@@ -3,6 +3,7 @@ import { Avatar, Badge, Button } from '@fluentui/react-components';
 import { api } from '../api.js';
 import Drawer from './Drawer.jsx';
 import { STATUS_COLORS } from './ProjectList.jsx';
+import { formatDateOnly as formatDate } from '../dateUtils.js';
 
 const STATUS_EVENT_LABEL = {
   Bidding: 'Set to Bidding', Submitted: 'Bid submitted',
@@ -11,11 +12,6 @@ const STATUS_EVENT_LABEL = {
 
 function initials(name) {
   return (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-}
-function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
 }
 function eventTitle(ev) {
   if (ev.kind === 'created') return 'Project created';

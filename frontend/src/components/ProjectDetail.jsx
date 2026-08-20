@@ -7,6 +7,7 @@ import {
 } from '@fluentui/react-icons';
 import { STATUS_COLORS } from './ProjectList.jsx';
 import Drawer from './Drawer.jsx';
+import { formatDate, formatDateOnly } from '../dateUtils.js';
 
 const TYPE_LABELS = {
   call: 'Phone call', email: 'Email', coffee: 'Coffee / meal',
@@ -24,24 +25,6 @@ function contactMatches(c, query) {
   if (!q) return true;
   return (c.name || '').toLowerCase().startsWith(q)
     || (c.company || '').toLowerCase().startsWith(q);
-}
-
-function formatDate(iso) {
-  if (!iso) return null;
-  const d = new Date(iso);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const yy = String(d.getFullYear()).slice(-2);
-  let h = d.getHours();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return `${mm}/${dd}/${yy} ${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
-}
-
-function formatDateOnly(iso) {
-  if (!iso) return null;
-  const d = new Date(iso);
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 export default function ProjectDetail({

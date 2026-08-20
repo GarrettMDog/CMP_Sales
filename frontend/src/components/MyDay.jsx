@@ -2,16 +2,12 @@ import { useState, useEffect } from 'react';
 import { Avatar, Badge, Spinner } from '@fluentui/react-components';
 import { api } from '../api.js';
 import { STATUS_COLORS } from './ProjectList.jsx';
+import { formatDateOnly } from '../dateUtils.js';
 
 const TEMP_COLORS = { Hot: 'danger', Warm: 'warning', Cold: 'informative' };
 
 function initials(name) {
   return (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-}
-function formatDateOnly(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
 }
 function dueLabel(f) {
   if (f.daysUntil <= 0) {

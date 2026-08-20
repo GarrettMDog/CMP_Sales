@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Spinner } from '@fluentui/react-components';
 import { api } from '../api.js';
 import Drawer from './Drawer.jsx';
+import { formatDate } from '../dateUtils.js';
 
 const RANGES = [
   { days: 30, label: '30d' },
@@ -20,17 +21,6 @@ function money(n) {
   if (v >= 1000000) return `$${(v / 1000000).toFixed(v % 1000000 === 0 ? 0 : 1)}M`;
   if (v >= 1000) return `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}K`;
   return `$${v.toLocaleString()}`;
-}
-function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const yy = String(d.getFullYear()).slice(-2);
-  let h = d.getHours();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return `${mm}/${dd}/${yy} ${h}:${String(d.getMinutes()).padStart(2, '0')} ${ampm}`;
 }
 
 // Per-rep leadership scorecard, shown in a drawer from the Activity dashboard.
