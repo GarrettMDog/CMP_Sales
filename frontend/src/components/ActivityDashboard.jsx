@@ -4,6 +4,7 @@ import {
 } from '@fluentui/react-components';
 import { api } from '../api.js';
 import RepScorecard from './RepScorecard.jsx';
+import { formatDateTime } from '../dateUtils.js';
 
 const TYPE_LABELS = {
   call: 'Phone call',
@@ -17,11 +18,6 @@ const TYPE_LABELS = {
 
 function initials(name) {
   return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-}
-
-function formatDateTime(iso) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    + ' · ' + new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 export default function ActivityDashboard({ onSelectContact, token, currentUser }) {

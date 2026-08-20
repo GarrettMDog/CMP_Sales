@@ -35,3 +35,16 @@ export function formatDateOnly(iso) {
   if (Number.isNaN(d.getTime())) return '';
   return isToday(d) ? 'Today' : numericDate(d);
 }
+
+// Friendly date + time, e.g. "Today · 3:45 PM" or "Aug 14 · 3:45 PM".
+// Used by the activity feed, which prefers a month-name style over numeric.
+export function formatDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const day = isToday(d)
+    ? 'Today'
+    : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${day} · ${time}`;
+}
