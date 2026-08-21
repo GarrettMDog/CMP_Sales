@@ -82,7 +82,7 @@ export default function AddEditProjectModal({ open, onClose, onSave, initial }) 
                 onChange={(_, d) => update('bidDueDate', d.value)}
               />
             </Field>
-            <Field label="Notes">
+            <Field label="Description">
               <Textarea value={form.notes} onChange={(_, d) => update('notes', d.value)} />
             </Field>
           </DialogContent>
