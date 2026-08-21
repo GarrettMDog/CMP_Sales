@@ -106,36 +106,6 @@ export default function AddEditContactModal({ open, onClose, onSave, initial, co
               <Input value={form.phone} onChange={(_, d) => update('phone', d.value)} />
             </Field>
 
-            <Field label="Birthday">
-              <div className="birthday-row">
-                <Dropdown
-                  placeholder="Month"
-                  value={form.birthdayMonth ? MONTHS[Number(form.birthdayMonth) - 1] : ''}
-                  onOptionSelect={(_, d) => update('birthdayMonth', d.optionValue)}
-                >
-                  {MONTHS.map((m, i) => (
-                    <Option key={m} value={String(i + 1)}>{m}</Option>
-                  ))}
-                </Dropdown>
-                <Input
-                  placeholder="Day"
-                  type="number"
-                  min={1}
-                  max={31}
-                  value={form.birthdayDay}
-                  onChange={(_, d) => update('birthdayDay', d.value)}
-                  style={{ width: 80 }}
-                />
-              </div>
-            </Field>
-
-            <Field label="How you know them">
-              <Textarea value={form.howYouKnowThem} onChange={(_, d) => update('howYouKnowThem', d.value)} />
-            </Field>
-            <Field label="Referral source">
-              <Input value={form.referralSource} onChange={(_, d) => update('referralSource', d.value)} />
-            </Field>
-
             <Field label="Relationship temperature">
               <Dropdown
                 value={form.temperature}
