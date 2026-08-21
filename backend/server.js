@@ -169,10 +169,13 @@ app.get('/api/my/day', verifyTeamsToken, (req, res) => {
       return new Date(a.dueAt) - new Date(b.dueAt);
     });
 
+  // Only the in-flight pipeline belongs on My Day — a won/lost/complete project
+  // isn't something the rep needs to act on today.
   const projects = db.prepare(`
     SELECT id, name, customer, status, value, bidDueDate
     FROM projects
     WHERE LOWER(createdByEmail) = ?
+      AND status IN ('Bidding', 'Submitted')
     ORDER BY (bidDueDate IS NULL), bidDueDate ASC
   `).all(me);
 
