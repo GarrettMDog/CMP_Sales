@@ -28,10 +28,11 @@ export default function ProjectList({
 
       <Dropdown
         placeholder="All statuses"
-        value={statusFilter || 'All statuses'}
+        value={statusFilter === 'Active' ? 'Active (Bidding + Submitted)' : (statusFilter || 'All statuses')}
         onOptionSelect={(_, data) => onStatusFilterChange(data.optionValue === 'All' ? '' : data.optionValue)}
         className="contact-list__filter"
       >
+        <Option value="Active">Active (Bidding + Submitted)</Option>
         <Option value="All">All statuses</Option>
         {Object.keys(STATUS_COLORS).map((s) => (
           <Option key={s} value={s}>{s}</Option>

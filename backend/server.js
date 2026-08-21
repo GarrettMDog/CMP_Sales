@@ -570,8 +570,13 @@ app.get('/api/projects', verifyTeamsToken, (req, res) => {
     params.push(like, like);
   }
   if (status && status.trim()) {
-    sql += ' AND p.status = ?';
-    params.push(status.trim());
+    // "Active" is a convenience filter for the in-flight pipeline.
+    if (status.trim() === 'Active') {
+      sql += ` AND p.status IN ('Bidding', 'Submitted')`;
+    } else {
+      sql += ' AND p.status = ?';
+      params.push(status.trim());
+    }
   }
   sql += ' ORDER BY p.createdAt DESC';
   res.json(db.prepare(sql).all(...params));

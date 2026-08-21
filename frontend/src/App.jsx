@@ -75,7 +75,7 @@ export default function App() {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [projectSearch, setProjectSearch] = useState('');
-  const [projectStatusFilter, setProjectStatusFilter] = useState('');
+  const [projectStatusFilter, setProjectStatusFilter] = useState('Active');
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState(null);
